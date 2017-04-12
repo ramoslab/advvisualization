@@ -2,6 +2,8 @@
 
 # TODOS und FIXMES
 # Pronation - Supination fehlt noch
+# Logik fuer das Hinzufuegen und Entfernen von verschiedenen Typen von Exos und ExoLogics fehlt noch
+# 	Dazu braucht es dann auch mehrere Interfaces (Tastatur + GUI, UDP)
 
 from math import pi, sin, cos, sqrt
 
@@ -11,11 +13,12 @@ from direct.task import Task
 class ExoLogic():
 	''' Logic for the movement of the Exo '''
 	
-	def __init__(self,exo_model,fthumb_model,fgroup_model,findex_model,dataController):
+	def __init__(self,exo_model,findex_model,fgroup_model,fthumb_model,dataController):
 		self.exo = exo_model
-		self.fthumb = fthumb_model
-		self.fgroup = fgroup_model
 		self.findex = findex_model
+		self.fgroup = fgroup_model
+		self.fthumb = fthumb_model
+			
 		self.dc = dataController
 		
 	def getDataTask(self,task):
@@ -37,14 +40,14 @@ class ExoLogic():
 		
 		return Task.cont
 
-class DataControllerKeyboard():
+class ExoDataControllerKeyboard():
 	''' A DataController that returns the robot position according to the keyboard input '''
 	
 	def __init__(self):
 		self.robot = {}
+		self.findex = {}
 		self.fgroup = {}
 		self.fthumb = {}
-		self.findex = {}
 		
 		self.robot['x'] = 0
 		self.robot['y'] = 0
@@ -55,7 +58,7 @@ class DataControllerKeyboard():
 		self.fthumb['heading'] = 0
 			
 	def get_data(self,exo_state):
-		''' Function that returns the position data the exo logic object '''
+		''' Function that returns the position data to the exo logic object '''
 		self.move(exo_state)
 		
 		return (self.robot,self.findex,self.fgroup,self.fthumb)
@@ -229,56 +232,34 @@ class DataControllerKeyboard():
 	def compute_fthumb(self,dir,exo_state):
 		''' Turn the thumb '''
 		if dir == 'open':
-			return (exo_state[5] - 2)%360
-		else:
 			return (exo_state[5] + 2)%360
+		else:
+			return (exo_state[5] - 2)%360
 
-# class DataControllerStatic():
-	# ''' A DataController that returns the static position value with which it was initialised. '''
+class ExoDataControllerStatic():
+	''' A DataController that returns the static position value with which it was initialised. '''
 	
-	# def __init__(self,
+	def __init__(self,exo_x,exo_y,exo_h,findex_h,fgroup_h,fthumb_h):
+		self.robot = {}
+		self.findex = {}
+		self.fgroup = {}
+		self.fthumb = {}
+		
+		self.robot['x'] = exo_x
+		self.robot['y'] = exo_y
+		self.robot['heading'] = exo_h
+		
+		self.findex['heading'] = findex_h
+		self.fgroup['heading'] = fgroup_h
+		self.fthumb['heading'] = fthumb_h
+			
+	def get_data(self,exo_state):
+		''' Function that returns the position data to the exo logic object '''
+		
+		return (self.robot,self.findex,self.fgroup,self.fthumb)
 
 # class DataControllerPlayback():
 # Playback predefined trajectory at the correct speed
 
 # class DataControllerRealTime():
 # A roboter that gets data via UDP
-	
-
-class SpeedVector():
-
-	def __init__(self,robot_pos_x, robot_pos_y, robot_pos_z, robot_heading, fgroup_heading, fthumb_heading, findex_heading):
-		self.robot = {}
-		self.fgroup = {}
-		self.fthumb = {}
-		self.findex = {}
-		
-		self.robot['x'] = robot_pos_x
-		self.robot['y'] = robot_pos_y
-		self.robot['heading'] = robot_heading
-		
-		self.fgroup['heading'] = fgroup_heading
-		self.fthumb['heading'] = fthumb_heading
-		self.findex['heading'] = findex_heading
-		
-	def move_x(self,x):
-		self.robot['x'] = x
-	
-	def move_y(self,y):
-		self.robot['y'] = y
-		
-	def turn(self,h):
-		self.robot['heading'] = h
-		
-	def turn_fgroup(self,angle):
-		self.fgroup['heading'] = angle
-		
-	def turn_fthumb(self,angle):
-		self.fthumb['heading'] = angle
-		
-	def turn_findex(self,angle):
-		self.findex['heading'] = angle
-		
-		
-# Superclass Robot
-# Class Robot_keyboard: Initialisiert mit Speedvector
