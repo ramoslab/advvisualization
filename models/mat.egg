@@ -1,0 +1,67 @@
+<CoordinateSystem> { Z-up } 
+<Material> Material {
+  <Scalar> diffr { 0.189712 }
+  <Scalar> diffg { 0.640000 }
+  <Scalar> diffb { 0.171980 }
+  <Scalar> specr { 0.500000 }
+  <Scalar> specg { 0.500000 }
+  <Scalar> specb { 0.500000 }
+  <Scalar> shininess { 12.5 }
+  <Scalar> ambr { 1.000000 }
+  <Scalar> ambg { 1.000000 }
+  <Scalar> ambb { 1.000000 }
+  <Scalar> emitr { 0.000000 }
+  <Scalar> emitg { 0.000000 }
+  <Scalar> emitb { 0.000000 }
+}
+
+<Texture> Texture {
+  "./textures/concrete_wall.jpg"
+  <Scalar> uv-name { ORCO }
+  <Scalar> envtype { MODULATE }
+  <Scalar> minfilter { LINEAR_MIPMAP_LINEAR }
+  <Scalar> magfilter { LINEAR_MIPMAP_LINEAR }
+  <Scalar> wrap { REPEAT }
+}
+
+  <Group> Plane {
+    <Transform> {
+      <Matrix4> {
+        4.5 0.0 0.0 0.0 
+        0.0 4.75 0.0 0.0 
+        0.0 0.0 1.0 0.0 
+        0.002276480197906494 0.002525418996810913 -0.0020091524347662926 1.0 
+      }
+    }
+    
+    <VertexPool> Plane {
+    
+      <Vertex> 0 {-4.497724 -4.747475 -0.002009
+        <UV> ORCO {
+          0.000000 0.000000 
+        }
+      }
+      <Vertex> 1 {4.502276 -4.747475 -0.002009
+        <UV> ORCO {
+          1.000000 0.000000 
+        }
+      }
+      <Vertex> 2 {4.502276 4.752525 -0.002009
+        <UV> ORCO {
+          1.000000 1.000000 
+        }
+      }
+      <Vertex> 3 {-4.497724 4.752525 -0.002009
+        <UV> ORCO {
+          0.000000 1.000000 
+        }
+      }}
+    
+    
+    <Polygon> {
+      <TRef> { Texture }
+      <MRef> { Material }
+      <Normal> {0.000000 0.000000 1.000000}
+      <VertexRef> { 0 1 2 3 <Ref> { Plane }} 
+    }
+  }
