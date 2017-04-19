@@ -13,8 +13,9 @@ from direct.task import Task
 class ExoLogic():
 	''' Logic for the movement of the Exo '''
 	
-	def __init__(self,exo_model,findex_model,fgroup_model,fthumb_model,dataController):
+	def __init__(self,exo_model,exo_prono,findex_model,fgroup_model,fthumb_model,dataController):
 		self.exo = exo_model
+		self.prono = exo_prono
 		self.findex = findex_model
 		self.fgroup = fgroup_model
 		self.fthumb = fthumb_model
@@ -25,7 +26,7 @@ class ExoLogic():
 		''' This is the task the handles the movement of the exo model. '''
 		
 		# Retrieve the data from the controller
-		exo_state = (self.exo.getX(),self.exo.getY(),self.exo.getH(),self.findex.getH(),self.fgroup.getH(),self.fthumb.getH())
+		exo_state = (self.exo.getX(),self.exo.getY(),self.exo.getH(),self.prono.getR(),self.findex.getH(),self.fgroup.getH(),self.fthumb.getH())
 		data = self.dc.get_data(exo_state)
 		
 		# Set parameters of the base
@@ -34,9 +35,10 @@ class ExoLogic():
 		self.exo.setH(data[0]['heading'])
 		
 		# Set parameters of the arm module
-		self.findex.setH(data[1]['heading'])
-		self.fgroup.setH(data[2]['heading'])
-		self.fthumb.setH(data[3]['heading'])
+		self.prono.setR(data[1]['roll'])
+		self.findex.setH(data[2]['heading'])
+		self.fgroup.setH(data[3]['heading'])
+		self.fthumb.setH(data[4]['heading'])
 		
 		return Task.cont
 
@@ -45,6 +47,7 @@ class ExoDataControllerKeyboard():
 	
 	def __init__(self):
 		self.robot = {}
+		self.prono = {}
 		self.findex = {}
 		self.fgroup = {}
 		self.fthumb = {}
@@ -53,6 +56,7 @@ class ExoDataControllerKeyboard():
 		self.robot['y'] = 0
 		self.robot['heading'] = 0
 		
+		self.prono['roll'] = 0
 		self.findex['heading'] = 0
 		self.fgroup['heading'] = 0
 		self.fthumb['heading'] = 0
@@ -61,7 +65,7 @@ class ExoDataControllerKeyboard():
 		''' Function that returns the position data to the exo logic object '''
 		self.move(exo_state)
 		
-		return (self.robot,self.findex,self.fgroup,self.fthumb)
+		return (self.robot,self.prono,self.findex,self.fgroup,self.fthumb)
 	
 	def move(self,exo_state):
 		''' Polls the keys and executes the functions that compute the target positions '''
@@ -78,6 +82,8 @@ class ExoDataControllerKeyboard():
 		b_s = KeyboardButton.asciiKey('s')
 		b_e = KeyboardButton.asciiKey('e')
 		b_d = KeyboardButton.asciiKey('d')
+		b_r = KeyboardButton.asciiKey('r')
+		b_f = KeyboardButton.asciiKey('f')
 		
 		# Polling logic and execution of movements
 		
@@ -132,10 +138,17 @@ class ExoDataControllerKeyboard():
 		if is_down(b_d):
 			movement = self.compute_fthumb('close',exo_state)
 			self.turn_fthumb(movement)
+			
+		# Button "R" pronates the hand
+		if is_down(b_r):
+			movement = self.compute_prono('pronate',exo_state)
+			self.turn_prono(movement)
+			
+		# Button "D" supinates the hand
+		if is_down(b_f):
+			movement = self.compute_prono('supinate',exo_state)
+			self.turn_prono(movement)
 		
-		# Apply speedvector
-		#FIMXE Speedvector tied to robot needed; Robot controller needed
-		#FIXME Move keyboard control to Controller class; Robot accepts controller that is its data provider throughout its lifetime
 	
 	# Functions computing and storing the movement
 	def move_x(self,x):
@@ -155,6 +168,9 @@ class ExoDataControllerKeyboard():
 		
 	def turn_fthumb(self,angle):
 		self.fthumb['heading'] = angle
+		
+	def turn_prono(self,angle):
+		self.prono['roll'] = angle
 	
 	def compute_turnExo(self,heading,exo_state):
 		''' Turn the exo toward a target position '''
@@ -218,37 +234,46 @@ class ExoDataControllerKeyboard():
 	def compute_findex(self,dir,exo_state):
 		''' Turn the index fingers '''
 		if dir == 'open':
-			return (exo_state[3] - 2)%360
-		else:
-			return (exo_state[3] + 2)%360
-			
-	def compute_fgroup(self,dir,exo_state):
-		''' Turn the finger group '''
-		if dir == 'open':
 			return (exo_state[4] - 2)%360
 		else:
 			return (exo_state[4] + 2)%360
 			
+	def compute_fgroup(self,dir,exo_state):
+		''' Turn the finger group '''
+		if dir == 'open':
+			return (exo_state[5] - 2)%360
+		else:
+			return (exo_state[5] + 2)%360
+			
 	def compute_fthumb(self,dir,exo_state):
 		''' Turn the thumb '''
 		if dir == 'open':
-			return (exo_state[5] + 2)%360
+			return (exo_state[6] + 2)%360
 		else:
-			return (exo_state[5] - 2)%360
+			return (exo_state[6] - 2)%360
+			
+	def compute_prono(self,dir,exo_state):
+		''' Pronate or supinate '''
+		if dir == 'pronate':
+			return (exo_state[3] + 2)%360
+		else:
+			return (exo_state[3] - 2)%360
 
 class ExoDataControllerStatic():
 	''' A DataController that returns the static position value with which it was initialised. '''
 	
-	def __init__(self,exo_x,exo_y,exo_h,findex_h,fgroup_h,fthumb_h):
+	def __init__(self,exo_x,exo_y,exo_h,prono_r,findex_h,fgroup_h,fthumb_h):
 		self.robot = {}
+		self.prono = {}
 		self.findex = {}
 		self.fgroup = {}
 		self.fthumb = {}
-		
+				
 		self.robot['x'] = exo_x
 		self.robot['y'] = exo_y
 		self.robot['heading'] = exo_h
 		
+		self.prono['roll'] = prono_r
 		self.findex['heading'] = findex_h
 		self.fgroup['heading'] = fgroup_h
 		self.fthumb['heading'] = fthumb_h
@@ -256,7 +281,7 @@ class ExoDataControllerStatic():
 	def get_data(self,exo_state):
 		''' Function that returns the position data to the exo logic object '''
 		
-		return (self.robot,self.findex,self.fgroup,self.fthumb)
+		return (self.robot,self.prono,self.findex,self.fgroup,self.fthumb)
 
 # class DataControllerPlayback():
 # Playback predefined trajectory at the correct speed

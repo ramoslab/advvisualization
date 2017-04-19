@@ -35,11 +35,11 @@ class MyApp(ShowBase):
 		self.graphical_objects[1]['exo'].reparentTo(self.render)
 		
 		dc = advclass.ExoDataControllerKeyboard()
-		dc2 = advclass.ExoDataControllerStatic(1,3,20,180,20,0)
+		dc2 = advclass.ExoDataControllerStatic(1,3,20,0,180,20,0)
 		
-		self.logic_objects.append(advclass.ExoLogic(self.graphical_objects[0]['exo'],self.graphical_objects[0]['findex'],self.graphical_objects[0]['fgroup'],self.graphical_objects[0]['fthumb'],dc))
+		self.logic_objects.append(advclass.ExoLogic(self.graphical_objects[0]['exo'],self.graphical_objects[0]['prono'],self.graphical_objects[0]['findex'],self.graphical_objects[0]['fgroup'],self.graphical_objects[0]['fthumb'],dc))
 		
-		self.logic_objects.append(advclass.ExoLogic(self.graphical_objects[1]['exo'],self.graphical_objects[1]['findex'],self.graphical_objects[1]['fgroup'],self.graphical_objects[1]['fthumb'],dc2))
+		self.logic_objects.append(advclass.ExoLogic(self.graphical_objects[1]['exo'],self.graphical_objects[1]['prono'],self.graphical_objects[1]['findex'],self.graphical_objects[1]['fgroup'],self.graphical_objects[1]['fthumb'],dc2))
 		
 		# Add movement task to task manager
 		taskMgr.add(self.logic_objects[0].getDataTask, "moveTask")
@@ -81,7 +81,8 @@ class MyApp(ShowBase):
 		# Load models
 		data = {}
 		data['exo'] = loader.loadModel('models/exo3_base.egg')
-		data['arm'] = loader.loadModel('models/exo3_arm.egg')
+		data['arm_rest'] = loader.loadModel('models/exo3_arm_rest.egg')
+		data['prono'] = loader.loadModel('models/exo3_prono.egg')
 		data['fthumb'] = loader.loadModel('models/exo3_fthumb.egg')
 		data['fgroup'] = loader.loadModel('models/exo3_fgroup.egg')
 		data['findex'] = loader.loadModel('models/exo3_findex.egg')
@@ -93,25 +94,26 @@ class MyApp(ShowBase):
 		exoMaterial.setDiffuse((0.5,0.5,0.5,1))
 		
 		armMaterial = Material()
-		armMaterial.setShininess(5.0)
-		armMaterial.setAmbient((0.6,0.6,0.7,0.7))
-		armMaterial.setDiffuse((0.4,0.4,0.4,1))
+		armMaterial.setShininess(12.0)
+		armMaterial.setAmbient((0.6,0.6,0.6,1))
+		armMaterial.setDiffuse((0.3,0.3,0.3,1))
 		
 		data['exo'].setMaterial(exoMaterial)
-		data['arm'].setMaterial(armMaterial)
+		data['arm_rest'].setMaterial(armMaterial)
+		data['prono'].setMaterial(armMaterial)
 		
 		# Set model properties
-		data['fthumb'].setPos(-0.5,1.5,2)
-		data['fthumb'].setP(12)
-		data['fgroup'].setPos(0.8,1.65,2)
-		data['fgroup'].setP(12)
-		data['findex'].setPos(0.8,1.5,2.6)
-		data['findex'].setP(12)
+		data['prono'].setPos(0.1,1.8,1.5)
+		data['prono'].setP(0)
+		data['fthumb'].setPos(-0.5,0.3,0.5)
+		data['fgroup'].setPos(0.6,0.3,0.3)
+		data['findex'].setPos(0.6,0.3,1)
 		
-		data['arm'].reparentTo(data['exo'])
-		data['fthumb'].reparentTo(data['arm'])
-		data['fgroup'].reparentTo(data['arm'])
-		data['findex'].reparentTo(data['arm'])
+		data['arm_rest'].reparentTo(data['exo'])
+		data['prono'].reparentTo(data['arm_rest'])
+		data['fthumb'].reparentTo(data['prono'])
+		data['fgroup'].reparentTo(data['prono'])
+		data['findex'].reparentTo(data['prono'])
 		
 		return data
 		
