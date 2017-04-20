@@ -48,10 +48,14 @@ class MyApp(ShowBase):
 		# taskMgr.add(self.logic_objects[1].getDataTask, "moveTask")
 		
 		pl = advclass.ProgramLogic(self.render)
+		
+		# taskMgr.doMethodLater(1,pl.CommandListenerTask, "udptask")
+		
 		self.accept('f10',self.acceptExoTask,[pl])
 		self.accept('f11',self.removeExoTask,[pl])
 		
-		# taskMgr.add(pl.CommandListenerTask, "keytask")
+		taskMgr.add(pl.tskListenerPolling, "tcp_establish")
+		taskMgr.add(pl.tskReaderPolling, "tcp_poll")
 		
 	def acceptExoTask(self,pl):
 		### Temporary function for testing ###

@@ -294,14 +294,71 @@ class ProgramLogic():
 		# List that contains all exos
 		self.exos = []
 		self.rootNode = render
+		# Startup network protocol
+		self.cManager = QueuedConnectionManager()
+		self.cListener = QueuedConnectionListener(self.cManager, 0)
+		self.cReader = QueuedConnectionReader(self.cManager, 0)
+		self.cReader.setRawMode(True)
+		self.cWriter = ConnectionWriter(self.cManager, 0)
 		
+		self.activeConnections = []
+		self.port_address=9900
+		self.backlog = 2
+		self.tcpSocket = self.cManager.openTCPServerRendezvous(self.port_address,self.backlog)
+		
+		self.activeConnections = []
+		
+		self.cListener.addConnection(self.tcpSocket)
+		
+		print('Ready')
+			
+	def tskListenerPolling(self,taskdata):
+		if self.cListener.newConnectionAvailable():
+			rendezvous = PointerToConnection()
+			netAddress = NetAddress()
+			newConnection = PointerToConnection()
+			print('conn available')
+	 
+			if self.cListener.getNewConnection(rendezvous,netAddress,newConnection):
+			  newConnection = newConnection.p()
+			  self.activeConnections.append(newConnection) # Remember connection
+			  self.cReader.addConnection(newConnection)     # Begin reading connection
+			  print('new conn')
+		  
+		return Task.cont
+		
+	def tskReaderPolling(self,taskdata):
+		if self.cReader.dataAvailable():
+			datagram=NetDatagram()  # catch the incoming data in this instance
+			# Check the return value; if we were threaded, someone else could have
+			# snagged this data before we did
+			if self.cReader.getData(datagram):
+				print("Data received")
+				self.test_tcp(datagram)
+				self.cWriter.send("test",self.activeConnections[-1])
+		
+		return Task.cont
+		
+	def tskTerminateConnections(self,taskdata):
+		for client in self.activeConnections:
+			cReader.removeConnection(client)
+			
+		self.activeConnections = []
+		self.cManager.closeConnection(tcpSocket)
+	
+	def test_tcp(self,datagram):
+		print(datagram)
+	
 	def CommandListenerTask(self,task):
 		''' Task that listens to UDP for commands.'''
 		
+		date, addr = self.sock.recvfrom(1024)
+		if data != "":
+			print("Msg.: ", data)
 		
-			
-		return Task.cont
+		return Task.again
 		
+		# USE Functions implemented in Pandas
 		
 		#TODO: Keyboard input push and pop exos
 
