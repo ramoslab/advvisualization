@@ -42,6 +42,8 @@ class ExoLogic():
 		
 		return Task.cont
 
+# ### Data controllers ### #		
+
 class ExoDataControllerKeyboard():
 	''' A DataController that returns the robot position according to the keyboard input '''
 	
@@ -58,8 +60,8 @@ class ExoDataControllerKeyboard():
 		
 		self.prono['roll'] = 0
 		self.findex['heading'] = 0
-		self.fgroup['heading'] = 0
-		self.fthumb['heading'] = 0
+		self.fgroup['heading'] = -10
+		self.fthumb['heading'] = 10
 			
 	def get_data(self,exo_state):
 		''' Function that returns the position data to the exo logic object '''
@@ -282,7 +284,108 @@ class ExoDataControllerStatic():
 		''' Function that returns the position data to the exo logic object '''
 		
 		return (self.robot,self.prono,self.findex,self.fgroup,self.fthumb)
+		
 
+# ### Program logic ### #
+class ProgramLogic():
+	''' ProgramLogic that controls creating and removing exos and their corresponding data controllers '''
+	
+	def __init__(self,render):
+		# List that contains all exos
+		self.exos = []
+		print(render)
+		self.rootNode = render
+		
+	def CommandListenerTask(self,task):
+		''' Task that listens to UDP for commands.'''
+
+		is_down = base.mouseWatcherNode.is_button_down
+		
+		button_f10 = KeyboardButton.f10()
+		
+		if is_down(button_f10):
+			taskMgr.add(self.addExoTask,'exoTask', extraArgs = [self,'keyboard',""])
+			
+		return Task.cont
+		
+		
+		#TODO: Keyboard input push and pop exos
+
+	def addExoTask(self,task,type,data):
+		''' Function that adds a new task to the taskmanager. The new task adds a new exo of specified type. '''
+		
+		if type == 'keyboard':
+			# Load, modify and reparent models
+			modeldata = self.create_exo_model()
+			
+			# Create logic objects
+			dc = ExoDataControllerKeyboard()
+			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fthumb'],modeldata['fgroup'],dc)
+			
+			# Add Exo to the program logic
+			self.exos.append(exo)
+			taskMgr.add(self.exos[-1].getDataTask, "moveTask")
+			self.exos[-1].exo.reparentTo(self.rootNode)
+			
+		elif type == 'static':
+			# Load, modify and reparent models
+			modeldata = self.create_exo_model()
+			
+			# Create logic objects
+			dc = ExoDataControllerStatic(1,3,20,0,180,-10,10)
+			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fthumb'],modeldata['fgroup'],dc)
+			
+			# Add Exo to the program logic
+			self.exos.append(exo)
+			taskMgr.add(self.exos[-1].getDataTask, "moveTask")
+			self.exos[-1].exo.reparentTo(self.rootNode)
+			
+		return Task.done
+	
+	def create_exo_model(self):
+		''' Function that loads an exo model '''
+		# Load models
+		data = {}
+		data['exo'] = loader.loadModel('models/exo3_base.egg')
+		data['arm_rest'] = loader.loadModel('models/exo3_arm_rest.egg')
+		data['prono'] = loader.loadModel('models/exo3_prono.egg')
+		data['fthumb'] = loader.loadModel('models/exo3_fthumb.egg')
+		data['fgroup'] = loader.loadModel('models/exo3_fgroup.egg')
+		data['findex'] = loader.loadModel('models/exo3_findex.egg')
+	
+		# Define and set materials
+		exoMaterial = Material()
+		exoMaterial.setShininess(5.0)
+		exoMaterial.setAmbient((0.6,0.6,0.6,1))
+		exoMaterial.setDiffuse((0.5,0.5,0.5,1))
+		
+		armMaterial = Material()
+		armMaterial.setShininess(12.0)
+		armMaterial.setAmbient((0.6,0.6,0.6,1))
+		armMaterial.setDiffuse((0.3,0.3,0.3,1))
+		
+		data['exo'].setMaterial(exoMaterial)
+		data['arm_rest'].setMaterial(armMaterial)
+		data['prono'].setMaterial(armMaterial)
+		
+		# Set model properties
+		data['prono'].setPos(0.1,1.8,1.5)
+		data['prono'].setP(0)
+		data['fthumb'].setPos(-0.5,0.3,0.5)
+		data['fgroup'].setPos(0.6,0.3,0.3)
+		data['fgroup'].setH(120)
+		data['findex'].setPos(0.6,0.3,1)
+		data['findex'].setH(120)
+		
+		data['arm_rest'].reparentTo(data['exo'])
+		data['prono'].reparentTo(data['arm_rest'])
+		data['fthumb'].reparentTo(data['prono'])
+		data['fgroup'].reparentTo(data['prono'])
+		data['findex'].reparentTo(data['prono'])
+		
+		return data
+	
+	
 # class DataControllerPlayback():
 # Playback predefined trajectory at the correct speed
 
