@@ -48,7 +48,19 @@ class MyApp(ShowBase):
 		# taskMgr.add(self.logic_objects[1].getDataTask, "moveTask")
 		
 		pl = advclass.ProgramLogic(self.render)
-		taskMgr.add(pl.CommandListenerTask, "keytask")
+		self.accept('f10',self.acceptExoTask,[pl])
+		self.accept('f11',self.removeExoTask,[pl])
+		
+		# taskMgr.add(pl.CommandListenerTask, "keytask")
+		
+	def acceptExoTask(self,pl):
+		### Temporary function for testing ###
+		taskMgr.add(pl.addExoTask,'addExoTask', extraArgs = [pl,'keyboard',""])
+		
+	def removeExoTask(self,pl):
+		### Temporary function for testing ###
+		taskMgr.add(pl.removeExoTask,'removeExoTask', extraArgs = [pl,'last'])
+		
 		
 	def build_scene(self):
 		# Define the lights

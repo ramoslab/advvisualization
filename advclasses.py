@@ -293,18 +293,12 @@ class ProgramLogic():
 	def __init__(self,render):
 		# List that contains all exos
 		self.exos = []
-		print(render)
 		self.rootNode = render
 		
 	def CommandListenerTask(self,task):
 		''' Task that listens to UDP for commands.'''
-
-		is_down = base.mouseWatcherNode.is_button_down
 		
-		button_f10 = KeyboardButton.f10()
 		
-		if is_down(button_f10):
-			taskMgr.add(self.addExoTask,'exoTask', extraArgs = [self,'keyboard',""])
 			
 		return Task.cont
 		
@@ -320,7 +314,7 @@ class ProgramLogic():
 			
 			# Create logic objects
 			dc = ExoDataControllerKeyboard()
-			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fthumb'],modeldata['fgroup'],dc)
+			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
 			self.exos.append(exo)
@@ -333,13 +327,32 @@ class ProgramLogic():
 			
 			# Create logic objects
 			dc = ExoDataControllerStatic(1,3,20,0,180,-10,10)
-			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fthumb'],modeldata['fgroup'],dc)
+			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
 			self.exos.append(exo)
 			taskMgr.add(self.exos[-1].getDataTask, "moveTask")
 			self.exos[-1].exo.reparentTo(self.rootNode)
 			
+		print(len(self.exos))
+		return Task.done
+		
+	def removeExoTask(self,task,id):
+		''' Removes specific exo from program logic (and secene). '''
+		
+		if id == 'last' and len(self.exos) > 0:
+			# Remove exo model from rendering
+			self.exos[-1].exo.detachNode()
+			# Remove ExoLogic from ProgramLogic
+			del self.exos[-1]
+		
+		if id < len(self.exos):
+			# Remove exo model from rendering
+			self.exos[id].exo.detachNode()
+			# Remove ExoLogic from ProgramLogic
+			del self.exos[id]
+			
+		print(len(self.exos))
 		return Task.done
 	
 	def create_exo_model(self):
