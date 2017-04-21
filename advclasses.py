@@ -286,6 +286,62 @@ class ExoDataControllerStatic():
 		
 		return (self.robot,self.prono,self.findex,self.fgroup,self.fthumb)
 		
+# class DataControllerPlayback():
+# Playback predefined trajectory at the correct speed
+#FIXME This is not necessary! Instead a DataControllerRealTime should be created and the client should read a file and send it via TCP
+
+class ExoDataControllerRealTime():
+	''' A DataController that returns the static position value with which it was initialised. '''
+	
+	def __init__(selfs):
+	
+		# Setup robot
+		self.robot = {}
+		self.prono = {}
+		self.findex = {}
+		self.fgroup = {}
+		self.fthumb = {}
+				
+		# self.robot['x'] = exo_x
+		# self.robot['y'] = exo_y
+		# self.robot['heading'] = exo_h
+		
+		# self.prono['roll'] = prono_r
+		# self.findex['heading'] = findex_h
+		# self.fgroup['heading'] = fgroup_h
+		# self.fthumb['heading'] = fthumb_h
+		
+		# Setup network protocol for the command interface
+		self.cManager = QueuedConnectionManager()
+		self.cListener = QueuedConnectionListener(self.cManager, 0)
+		self.cReader = QueuedConnectionReader(self.cManager, 0)
+		self.cReader.setRawMode(True)
+		self.cWriter = ConnectionWriter(self.cManager, 0)
+		
+		# Network protocol configuration for the command interface
+		self.activeConnections = []
+		self.port_address=9901
+		self.backlog = 2
+		self.tcpSocket = self.cManager.openTCPServerRendezvous(self.port_address,self.backlog)
+		
+		# Startup network protocol for the command interface
+		self.cListener.addConnection(self.tcpSocket)
+			
+	def get_data(self,exo_state):
+		''' Function that returns the position data to the exo logic object '''
+		
+		self.move(exo_state)
+		
+		return (self.robot,self.prono,self.findex,self.fgroup,self.fthumb)
+	
+	def move(self,exo_state):
+		''' Polls the TCP connection and executes the functions that compute the target positions '''
+		
+		
+
+# class DataControllerRealTime():
+# A roboter that gets data via UDP
+		
 
 # ### Program logic ### #
 class ProgramLogic():
@@ -299,25 +355,25 @@ class ProgramLogic():
 		# This is referring to the root of the rendering tree
 		self.rootNode = render
 		
-		# Setup network protocol
+		# Setup network protocol for the command interface
 		self.cManager = QueuedConnectionManager()
 		self.cListener = QueuedConnectionListener(self.cManager, 0)
 		self.cReader = QueuedConnectionReader(self.cManager, 0)
 		self.cReader.setRawMode(True)
 		self.cWriter = ConnectionWriter(self.cManager, 0)
 		
-		# Network protocol configuration
+		# Network protocol configuration for the command interface
 		self.activeConnections = []
 		self.port_address=9900
 		self.backlog = 2
 		self.tcpSocket = self.cManager.openTCPServerRendezvous(self.port_address,self.backlog)
 		
-		# Startup network protocol
+		# Startup network protocol for the command interface
 		self.cListener.addConnection(self.tcpSocket)
 		
 		print('MESSAGE: Ready to accept connections.')
 			
-	def tskListenerPolling(self,taskdata):
+	def tskListenerPolling(self,task):
 		''' The task the polls the TCP port for new connections. Runs indefinitely. '''
 		if self.cListener.newConnectionAvailable():
 			rendezvous = PointerToConnection()
@@ -332,10 +388,10 @@ class ProgramLogic():
 		  
 		return Task.cont
 		
-	def tskReaderPolling(self,taskdata):
+	def tskReaderPolling(self,task):
 		''' The task the continuously reads new data. '''
 		if self.cReader.dataAvailable():
-			datagram=NetDatagram()  
+			datagram=NetDatagram()
 			if self.cReader.getData(datagram):
 				print("MESSAGE: Data received.")
 				# Call function that parses the data received
@@ -343,7 +399,7 @@ class ProgramLogic():
 		
 		return Task.cont
 		
-	def tskTerminateConnections(self,taskdata):
+	def tskTerminateConnections(self,task):
 		''' The task that terminates all client connections. '''
 		connections_exist = False
 		for client in self.activeConnections:
@@ -360,6 +416,8 @@ class ProgramLogic():
 		''' Function that parses the commands that are received through TCP. '''
 		# Extract message from the data
 		command = datagram.getMessage()
+		connection = datagram.getConnection()
+		print(connection)
 		print("MESSAGE: Command '"+command+"' received.")
 		
 		comm_parts = command.split(" ")
@@ -367,7 +425,7 @@ class ProgramLogic():
 		# Check if command has valid length
 		if len(comm_parts) < 2:
 			print('ERROR: did not understand command')
-			taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',[self,'Command not understood.'])
+			taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',extraArgs = ['Command not understood.',connection])
 			return
 		
 		# Check which command is being send
@@ -386,10 +444,11 @@ class ProgramLogic():
 						print('MESSAGE: Too many parameters')
 					else:
 						print('MESSAGE: Adding exo of type ' + exotype)
-						taskMgr.add(self.addExoTask, "addExoTask", extraArgs = [self,"static",exoparams])
+
+						taskMgr.add(self.addExoTask, "addExoTask",extraArgs = ["static",exoparams])
 						
 						# Send ID of the last added exo back to the client
-						taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id')
+						taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
 		
 		# "DELETE" command
 		elif comm_parts[0] == 'DELETE':
@@ -397,29 +456,38 @@ class ProgramLogic():
 			id = comm_parts[1]
 			if id in self.exos:
 				print('MESSAGE: Deleting exo: '+id)
-				taskMgr.add(self.removeExoTask, "removeExoTask", extraArgs = [self,id])
+				taskMgr.add(self.removeExoTask, "removeExoTask", extraArgs = [id])
 			
-				taskMgr.doMethodLater(0.5,self.send_message,'Send_delete_confirmation',[self,'Deleted exo '+id])
+				taskMgr.doMethodLater(0.5,self.send_message,'Send_delete_confirmation',extraArgs = ['Deleted exo '+id,connection])
 			else:
 				print("MESSAGE: ID " + id + " not found.")
-				taskMgr.doMethodLater(0.5,self.send_message,'Send_delete_not_found',[self,'Exo '+id+' not found.'])
+				taskMgr.doMethodLater(0.5,self.send_message,'Send_delete_not_found',extraArgs = ['Exo '+id+' not found.',connection])
+			
+		# "DATA" command
+		elif comm_parts[0] == 'DATA':
+			# Get the id of the exo
+			id = comm_parts[1]
+			# Check if this exo is of type RealTime
 			
 		# Invalid command
 		else:
 			print('ERROR: did not understand command')
-			taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',[self,'Command not understood.'])
+			taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',extraArgs = ['Command not understood.',connection])
 			
-	def send_latest_id(self,task):
+	def send_latest_id(self,connection):
 		''' This functions responds to the client and sends the ID of the exo that has been added last. '''
-		self.cWriter.send(":"+self.exo_ids_in_order[-1],self.activeConnections[-1])
+		# self.cWriter.send(":"+self.exo_ids_in_order[-1],self		.activeConnections[-1])
+		print(connection)
+		self.cWriter.send(":"+self.exo_ids_in_order[-1],connection)
 		return Task.done
 		
-	def send_message(self,task,message):
+	def send_message(self,message,connection):
 		''' This function responds to the client and sends a specified message. '''
-		self.cWriter.send(":"+message,self.activeConnections[-1])
+		# self.cWriter.send(":"+message,self.activeConnections[-1])
+		self.cWriter.send(":"+message,connection)
 		return Task.done
 		
-	def addExoTask(self,task,type,data):
+	def addExoTask(self,type,data):
 		''' Function that adds a new task to the taskmanager. The new task adds a new exo of specified type. '''
 		
 		if type == 'keyboard':
@@ -455,7 +523,7 @@ class ProgramLogic():
 		print("MESSAGE: # Exos in scene: "+ str(len(self.exos)) +"; Last id: "+self.exo_ids_in_order[-1])
 		return Task.done
 		
-	def removeExoTask(self,task,id):
+	def removeExoTask(self,id):
 		''' Removes specific exo from program logic (and secene). '''
 		
 		if id == 'last' and len(self.exos) > 0:
@@ -518,11 +586,3 @@ class ProgramLogic():
 		data['findex'].reparentTo(data['prono'])
 		
 		return data
-	
-	
-# class DataControllerPlayback():
-# Playback predefined trajectory at the correct speed
-#FIXME This is not necessary! Instead a DataControllerRealTime should be created and the client should read a file and send it via TCP
-
-# class DataControllerRealTime():
-# A roboter that gets data via UDP

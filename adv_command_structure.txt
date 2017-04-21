@@ -1,4 +1,4 @@
-Specification of how to control the program for the advanced feedback through the TCP connection.
+Specification of how to control the program for the advanced feedback and how to send data through the TCP connection.
 
 # ### Command table ### #
 
@@ -16,6 +16,15 @@ DELETE EXOID
 
 Parameters
 Exoid - Id of the exo to be removed
+
+DATA - Send data 
+Command structure:
+DATA EXOID PARAMETERS
+
+Parameters:
+Exoid - The unique Id of the exo
+Parameters - Parameters of the degrees of freedom, like for the EXOSTATIC type: BaseXpos,BaseYpos,BaseHeading,PronoRoll,IndexHeading,GroupHeading,ThumbHeading
+
 
 # ### Exotypes ### #
 

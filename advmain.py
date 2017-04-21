@@ -61,11 +61,11 @@ class MyApp(ShowBase):
 		
 	def acceptExoTask(self,pl):
 		### Temporary function for testing ###
-		taskMgr.add(pl.addExoTask,'addExoTask', extraArgs = [pl,'keyboard',""])
+		taskMgr.add(pl.addExoTask,'addExoTask', extraArgs = ['keyboard',""])
 		
 	def removeExoTask(self,pl):
 		### Temporary function for testing ###
-		taskMgr.add(pl.removeExoTask,'removeExoTask', extraArgs = [pl,'last'])
+		taskMgr.add(pl.removeExoTask,'removeExoTask', extraArgs = ['last'])
 		
 		
 	def build_scene(self):
