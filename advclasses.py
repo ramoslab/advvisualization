@@ -48,7 +48,9 @@ class ExoLogic():
 class ExoDataControllerKeyboard():
 	''' A DataController that returns the robot position according to the keyboard input '''
 	
-	def __init__(self):
+	def __init__(self,id):
+		self.id = id
+		
 		self.robot = {}
 		self.prono = {}
 		self.findex = {}
@@ -265,7 +267,10 @@ class ExoDataControllerKeyboard():
 class ExoDataControllerStatic():
 	''' A DataController that returns the static position value with which it was initialised. '''
 	
-	def __init__(self,exo_x,exo_y,exo_h,prono_r,findex_h,fgroup_h,fthumb_h):
+	def __init__(self,id,exo_x,exo_y,exo_h,prono_r,findex_h,fgroup_h,fthumb_h):
+		
+		self.id = id
+		
 		self.robot = {}
 		self.prono = {}
 		self.findex = {}
@@ -291,51 +296,37 @@ class ExoDataControllerStatic():
 #FIXME This is not necessary! Instead a DataControllerRealTime should be created and the client should read a file and send it via TCP
 
 class ExoDataControllerRealTime():
-	''' A DataController that returns the static position value with which it was initialised. '''
+	''' A DataController that returns the position value which it has received through TCP. '''
 	
-	def __init__(selfs):
+	def __init__(self, id):
 	
-		# Setup robot
+		self.id = id
+	
+		# Setup exo model
 		self.robot = {}
 		self.prono = {}
 		self.findex = {}
 		self.fgroup = {}
 		self.fthumb = {}
+		
 				
-		# self.robot['x'] = exo_x
-		# self.robot['y'] = exo_y
-		# self.robot['heading'] = exo_h
+	def set_data(self,exo_state):
+		''' Function that sets the parameters of the degrees of freedom of the robot. '''
 		
-		# self.prono['roll'] = prono_r
-		# self.findex['heading'] = findex_h
-		# self.fgroup['heading'] = fgroup_h
-		# self.fthumb['heading'] = fthumb_h
+		self.robot['x'] = exo_state[0]
+		self.robot['y'] = exo_state[1]
+		self.robot['heading'] = exo_state[2]
 		
-		# Setup network protocol for the command interface
-		self.cManager = QueuedConnectionManager()
-		self.cListener = QueuedConnectionListener(self.cManager, 0)
-		self.cReader = QueuedConnectionReader(self.cManager, 0)
-		self.cReader.setRawMode(True)
-		self.cWriter = ConnectionWriter(self.cManager, 0)
+		self.prono['roll'] = exo_state[3]
+		self.findex['heading'] = exo_state[4]
+		self.fgroup['heading'] = exo_state[5]
+		self.fthumb['heading'] = exo_state[6]
 		
-		# Network protocol configuration for the command interface
-		self.activeConnections = []
-		self.port_address=9901
-		self.backlog = 2
-		self.tcpSocket = self.cManager.openTCPServerRendezvous(self.port_address,self.backlog)
 		
-		# Startup network protocol for the command interface
-		self.cListener.addConnection(self.tcpSocket)
-			
 	def get_data(self,exo_state):
 		''' Function that returns the position data to the exo logic object '''
 		
-		self.move(exo_state)
-		
 		return (self.robot,self.prono,self.findex,self.fgroup,self.fthumb)
-	
-	def move(self,exo_state):
-		''' Polls the TCP connection and executes the functions that compute the target positions '''
 		
 		
 
@@ -417,7 +408,6 @@ class ProgramLogic():
 		# Extract message from the data
 		command = datagram.getMessage()
 		connection = datagram.getConnection()
-		print(connection)
 		print("MESSAGE: Command '"+command+"' received.")
 		
 		comm_parts = command.split(" ")
@@ -449,7 +439,17 @@ class ProgramLogic():
 						
 						# Send ID of the last added exo back to the client
 						taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
-		
+			elif exotype == 'EXOREALTIME':
+				if len(comm_parts) < 2:
+					print('MESSAGE: Invalid command')
+				else:
+					print('MESSAGE: Adding exo of type ' + exotype)
+
+					taskMgr.add(self.addExoTask, "addExoTask",extraArgs = ["realtime",""])
+						
+					# Send ID of the last added exo back to the client
+					taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+					
 		# "DELETE" command
 		elif comm_parts[0] == 'DELETE':
 			# Get the id of the exo
@@ -467,7 +467,19 @@ class ProgramLogic():
 		elif comm_parts[0] == 'DATA':
 			# Get the id of the exo
 			id = comm_parts[1]
-			# Check if this exo is of type RealTime
+			# Check if this exo is of type RealTime (implicitely by using catching exceptions)
+			try:
+				exoparams = comm_parts[2].split(",")
+				if len(exoparams) < 7:
+					print('MESSAGE: Not enough parameters')
+				elif len(exoparams) > 7:
+					print('MESSAGE: Too many parameters')
+				else:
+					# Cast input strings to int
+					exoparams_num = [ int(x) for x in exoparams ]
+					self.exos[id].dc.set_data(exoparams_num)
+			except:
+				print("MESSAGE: Moving robot "+id+" failed.")
 			
 		# Invalid command
 		else:
@@ -476,8 +488,6 @@ class ProgramLogic():
 			
 	def send_latest_id(self,connection):
 		''' This functions responds to the client and sends the ID of the exo that has been added last. '''
-		# self.cWriter.send(":"+self.exo_ids_in_order[-1],self		.activeConnections[-1])
-		print(connection)
 		self.cWriter.send(":"+self.exo_ids_in_order[-1],connection)
 		return Task.done
 		
@@ -494,12 +504,14 @@ class ProgramLogic():
 			# Load, modify and reparent models
 			modeldata = self.create_exo_model()
 			
+			# Create unique ID for exo
+			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
+			
 			# Create logic objects
-			dc = ExoDataControllerKeyboard()
+			dc = ExoDataControllerKeyboard(rand_id)
 			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
-			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
 			self.exos[rand_id] = exo
 			self.exo_ids_in_order.append(rand_id)
 			taskMgr.add(self.exos[rand_id].getDataTask, "moveTask")
@@ -509,12 +521,34 @@ class ProgramLogic():
 			# Load, modify and reparent models
 			modeldata = self.create_exo_model()
 			
+			# Create unique ID for exo
+			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
+			
 			# Create logic objects
-			dc = ExoDataControllerStatic(int(data[0]),int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5]),int(data[6]))
+			dc = ExoDataControllerKeyboard(rand_id)
 			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
+			self.exos[rand_id] = exo
+			self.exo_ids_in_order.append(rand_id)
+			taskMgr.add(self.exos[rand_id].getDataTask, "moveTask")
+			self.exos[rand_id].exo.reparentTo(self.rootNode)
+			
+		elif type == 'realtime':
+			# Load, modify and reparent models
+			modeldata = self.create_exo_model()
+			
+			# Create unique ID for exo
 			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
+			
+			# Create logic objects
+			dc = ExoDataControllerRealTime(rand_id)
+			# Set initial data
+			exo_initial_state = (0,0,0,0,0,-10,10)
+			dc.set_data(exo_initial_state)
+			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
+			
+			# Add Exo to the program logic
 			self.exos[rand_id] = exo
 			self.exo_ids_in_order.append(rand_id)
 			taskMgr.add(self.exos[rand_id].getDataTask, "moveTask")

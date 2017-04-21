@@ -21,45 +21,21 @@ class MyApp(ShowBase):
 		# Disable movement of the camera
 		base.disableMouse()
 		
-		# Initialise exo logic field
-		# self.exos = []
+		# Initialise program logic
+		pl = advclass.ProgramLogic(self.render)
+		
 		# Initialise scene
 		self.build_scene()
 		
-		# data = self.create_exo_model()
-		# self.graphical_objects.append(data)
-		
-		# data = self.add_exo()
-		# self.graphical_objects.append(data)
-		
-		# Reparent exo models
-		
-		# for exo in self.graphical_objects:
-			# exo['exo'].reparentTo(self.render)
-		
-		# dc = advclass.ExoDataControllerKeyboard()
-		# dc2 = advclass.ExoDataControllerStatic(1,3,20,0,180,-10,10)
-		
-		# self.logic_objects.append(advclass.ExoLogic(self.graphical_objects[0]['exo'],self.graphical_objects[0]['prono'],self.graphical_objects[0]['findex'],self.graphical_objects[0]['fgroup'],self.graphical_objects[0]['fthumb'],dc))
-		
-		# self.logic_objects.append(advclass.ExoLogic(self.graphical_objects[1]['exo'],self.graphical_objects[1]['prono'],self.graphical_objects[1]['findex'],self.graphical_objects[1]['fgroup'],self.graphical_objects[1]['fthumb'],dc2))
-		
-		# Add movement task to task manager
-		# taskMgr.add(self.logic_objects[0].getDataTask, "moveTask")
-		# taskMgr.add(self.logic_objects[1].getDataTask, "moveTask")
-		
-		pl = advclass.ProgramLogic(self.render)
-		
-		# taskMgr.doMethodLater(1,pl.CommandListenerTask, "udptask")
-		
-		self.accept('f10',self.acceptExoTask,[pl])
+		# Set accepted keys for keyboard control of the program logic
+		self.accept('f10',self.addExoTask,[pl])
 		self.accept('f11',self.removeExoTask,[pl])
 		self.accept('escape', self.exit_feedback, [pl])
 		
 		taskMgr.add(pl.tskListenerPolling, "tcp_establish")
 		taskMgr.add(pl.tskReaderPolling, "tcp_poll")
 		
-	def acceptExoTask(self,pl):
+	def addExoTask(self,pl):
 		### Temporary function for testing ###
 		taskMgr.add(pl.addExoTask,'addExoTask', extraArgs = ['keyboard',""])
 		
