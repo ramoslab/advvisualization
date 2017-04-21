@@ -10,6 +10,9 @@ from math import pi, sin, cos, sqrt
 from panda3d.core import *
 from direct.task import Task
 
+import random
+import string
+
 class ExoLogic():
 	''' Logic for the movement of the Exo '''
 	
@@ -291,9 +294,12 @@ class ProgramLogic():
 	''' ProgramLogic that controls creating and removing exos and their corresponding data controllers '''
 	
 	def __init__(self,render):
-		# List that contains all exos
-		self.exos = []
+		# List that contains all exos (Using a dict to be able to use hashmap-like random ids. Better for adding and removing exos.)
+		self.exos = {}
+		self.exo_ids_in_order = []
+		
 		self.rootNode = render
+		
 		# Startup network protocol
 		self.cManager = QueuedConnectionManager()
 		self.cListener = QueuedConnectionListener(self.cManager, 0)
@@ -384,37 +390,30 @@ class ProgramLogic():
 						
 						print(self.exos)
 					
-						taskMgr.doMethodLater(2,self.send_latest_id,'Send_Latest_Exo_id')
+						taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id')
 						
 					print(exoparams)
 			
 		elif comm_parts[0] == 'DELETE':
-			id = int(comm_parts[1])
+			id = comm_parts[1]
 			
 			print('Deleting exo',id)
-			taskMgr.add(self.addExoTask, "removeExoTask", extraArgs = [self,id])
+			taskMgr.add(self.removeExoTask, "removeExoTask", extraArgs = [self,id])
+			
+			taskMgr.doMethodLater(0.5,self.send_delete_confirmation,'Send_delete_confirmation')
 			
 			print('deleting EXO')
 		else:
 			print('did not understand command')
 			
 	def send_latest_id(self,task):
-		self.cWriter.send(":"+str(len(self.exos)-1),self.activeConnections[-1])
+		self.cWriter.send(":"+self.exo_ids_in_order[-1],self.activeConnections[-1])
 		return Task.done
 		
-	def CommandListenerTask(self,task):
-		''' Task that listens to UDP for commands.'''
+	def send_delete_confirmation(self,task):
+		self.cWriter.send(":Deleted",self.activeConnections[-1])
+		return Task.done
 		
-		date, addr = self.sock.recvfrom(1024)
-		if data != "":
-			print("Msg.: ", data)
-		
-		return Task.again
-		
-		# USE Functions implemented in Pandas
-		
-		#TODO: Keyboard input push and pop exos
-
 	def addExoTask(self,task,type,data):
 		''' Function that adds a new task to the taskmanager. The new task adds a new exo of specified type. '''
 		
@@ -427,9 +426,11 @@ class ProgramLogic():
 			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
-			self.exos.append(exo)
-			taskMgr.add(self.exos[-1].getDataTask, "moveTask")
-			self.exos[-1].exo.reparentTo(self.rootNode)
+			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
+			self.exos[rand_id] = exo
+			self.exo_ids_in_order.append(rand_id)
+			taskMgr.add(self.exos[rand_id].getDataTask, "moveTask")
+			self.exos[rand_id].exo.reparentTo(self.rootNode)
 			
 		elif type == 'static':
 			# Load, modify and reparent models
@@ -440,11 +441,13 @@ class ProgramLogic():
 			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
-			self.exos.append(exo)
-			taskMgr.add(self.exos[-1].getDataTask, "moveTask")
-			self.exos[-1].exo.reparentTo(self.rootNode)
+			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
+			self.exos[rand_id] = exo
+			self.exo_ids_in_order.append(rand_id)
+			taskMgr.add(self.exos[rand_id].getDataTask, "moveTask")
+			self.exos[rand_id].exo.reparentTo(self.rootNode)
 			
-		print(len(self.exos))
+		print(len(self.exos),self.exo_ids_in_order[-1])
 		return Task.done
 		
 	def removeExoTask(self,task,id):
@@ -452,15 +455,19 @@ class ProgramLogic():
 		
 		if id == 'last' and len(self.exos) > 0:
 			# Remove exo model from rendering
-			self.exos[-1].exo.detachNode()
+			self.exos[self.exo_ids_in_order[-1]].exo.detachNode()
 			# Remove ExoLogic from ProgramLogic
-			del self.exos[-1]
+			del self.exos[self.exo_ids_in_order[-1]]
+			# Remove the id of the Exo from ProgramLogic
+			del self.exo_ids_in_order[-1]
 		
-		if id < len(self.exos):
+		elif id in self.exos:
 			# Remove exo model from rendering
 			self.exos[id].exo.detachNode()
 			# Remove ExoLogic from ProgramLogic
 			del self.exos[id]
+			# Remove the id of the Exo from ProgramLogic
+			del self.exo_ids_in_order[self.exo_ids_in_order.index(id)]
 			
 		print(len(self.exos))
 		return Task.done

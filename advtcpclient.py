@@ -11,15 +11,17 @@ s.connect((TCP_IP, TCP_PORT))
 
 sendmessage = True
 
+exit_message = ('q','quit','exit')
+
 while sendmessage:
 	MESSAGE = input('Message:')
-	if MESSAGE != '00':
+	if MESSAGE not in exit_message:
 		s.send(MESSAGE.encode())
 	else:
 		sendmessage = False
 
 	data = s.recv(BUFFER_SIZE)
-	print("Id of the exo:", data.decode().split(":")[1])
+	print("Message:", data.decode().split(":")[1])
 s.close()
 
 #TODO: Get back id of exo
