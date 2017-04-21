@@ -1,10 +1,6 @@
 # Class definitions for the advanced feedback
 
-# TODOS und FIXMES
-# Pronation - Supination fehlt noch
-# Logik fuer das Hinzufuegen und Entfernen von verschiedenen Typen von Exos und ExoLogics fehlt noch
-# 	Dazu braucht es dann auch mehrere Interfaces (Tastatur + GUI, UDP)
-
+# ### Imports ### #
 from math import pi, sin, cos, sqrt
 
 from panda3d.core import *
@@ -12,6 +8,8 @@ from direct.task import Task
 
 import random
 import string
+
+# ### Begin ### #
 
 class ExoLogic():
 	''' Logic for the movement of the Exo '''
@@ -294,57 +292,59 @@ class ProgramLogic():
 	''' ProgramLogic that controls creating and removing exos and their corresponding data controllers '''
 	
 	def __init__(self,render):
-		# List that contains all exos (Using a dict to be able to use hashmap-like random ids. Better for adding and removing exos.)
+		# Dict that contains all exos (Using a dict to be able to use hashmap-like random ids. Better for adding and removing exos.)
 		self.exos = {}
+		# This list contains all the ids of the exos in the order they were added to the program
 		self.exo_ids_in_order = []
-		
+		# This is referring to the root of the rendering tree
 		self.rootNode = render
 		
-		# Startup network protocol
+		# Setup network protocol
 		self.cManager = QueuedConnectionManager()
 		self.cListener = QueuedConnectionListener(self.cManager, 0)
 		self.cReader = QueuedConnectionReader(self.cManager, 0)
 		self.cReader.setRawMode(True)
 		self.cWriter = ConnectionWriter(self.cManager, 0)
 		
+		# Network protocol configuration
 		self.activeConnections = []
 		self.port_address=9900
 		self.backlog = 2
 		self.tcpSocket = self.cManager.openTCPServerRendezvous(self.port_address,self.backlog)
 		
-		self.activeConnections = []
-		
+		# Startup network protocol
 		self.cListener.addConnection(self.tcpSocket)
 		
-		print('Ready')
+		print('MESSAGE: Ready to accept connections.')
 			
 	def tskListenerPolling(self,taskdata):
+		''' The task the polls the TCP port for new connections. Runs indefinitely. '''
 		if self.cListener.newConnectionAvailable():
 			rendezvous = PointerToConnection()
 			netAddress = NetAddress()
 			newConnection = PointerToConnection()
-			print('conn available')
 	 
 			if self.cListener.getNewConnection(rendezvous,netAddress,newConnection):
 			  newConnection = newConnection.p()
 			  self.activeConnections.append(newConnection) # Remember connection
 			  self.cReader.addConnection(newConnection)     # Begin reading connection
-			  print('new conn')
+			  print('MESSAGE: Client connected.')
 		  
 		return Task.cont
 		
 	def tskReaderPolling(self,taskdata):
+		''' The task the continuously reads new data. '''
 		if self.cReader.dataAvailable():
-			datagram=NetDatagram()  # catch the incoming data in this instance
-			# Check the return value; if we were threaded, someone else could have
-			# snagged this data before we did
+			datagram=NetDatagram()  
 			if self.cReader.getData(datagram):
-				print("Data received")
+				print("MESSAGE: Data received.")
+				# Call function that parses the data received
 				self.parse_commands(datagram)
 		
 		return Task.cont
 		
 	def tskTerminateConnections(self,taskdata):
+		''' The task that terminates all client connections. '''
 		connections_exist = False
 		for client in self.activeConnections:
 			self.cReader.removeConnection(client)
@@ -356,62 +356,67 @@ class ProgramLogic():
 		
 		return Task.done
 	
-	def test_tcp(self,datagram):
-		# Return ID of exo to be able to remove that exo later
-		print(datagram)
-		
 	def parse_commands(self,datagram):
+		''' Function that parses the commands that are received through TCP. '''
+		# Extract message from the data
 		command = datagram.getMessage()
-		print(command)
+		print("MESSAGE: Command '"+command+"' received.")
 		
 		comm_parts = command.split(" ")
 		
+		# Check if command has valid length
 		if len(comm_parts) < 2:
-			print('did not understand command')
+			print('ERROR: did not understand command')
+			taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',[self,'Command not understood.'])
 			return
 		
+		# Check which command is being send
+		# "ADD" command
 		if comm_parts[0] == 'ADD':
 			exotype = comm_parts[1]
-
+			# Check which type of exo should be added
 			if exotype == 'EXOSTATIC':
 				if len(comm_parts) < 3:
-					print('invalid command')
+					print('MESSAGE: Invalid command')
 				else:
 					exoparams = comm_parts[2].split(",")
 					if len(exoparams) < 7:
-						print('Not enough parameters')
+						print('MESSAGE: Not enough parameters')
 					elif len(exoparams) > 7:
-						print('Too many parameters')
+						print('MESSAGE: Too many parameters')
 					else:
-						print('Adding exo of type',exotype)
+						print('MESSAGE: Adding exo of type ' + exotype)
 						taskMgr.add(self.addExoTask, "addExoTask", extraArgs = [self,"static",exoparams])
 						
 						# Send ID of the last added exo back to the client
-						
-						print(self.exos)
-					
 						taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id')
-						
-					print(exoparams)
-			
+		
+		# "DELETE" command
 		elif comm_parts[0] == 'DELETE':
+			# Get the id of the exo
 			id = comm_parts[1]
+			if id in self.exos:
+				print('MESSAGE: Deleting exo: '+id)
+				taskMgr.add(self.removeExoTask, "removeExoTask", extraArgs = [self,id])
 			
-			print('Deleting exo',id)
-			taskMgr.add(self.removeExoTask, "removeExoTask", extraArgs = [self,id])
+				taskMgr.doMethodLater(0.5,self.send_message,'Send_delete_confirmation',[self,'Deleted exo '+id])
+			else:
+				print("MESSAGE: ID " + id + " not found.")
+				taskMgr.doMethodLater(0.5,self.send_message,'Send_delete_not_found',[self,'Exo '+id+' not found.'])
 			
-			taskMgr.doMethodLater(0.5,self.send_delete_confirmation,'Send_delete_confirmation')
-			
-			print('deleting EXO')
+		# Invalid command
 		else:
-			print('did not understand command')
+			print('ERROR: did not understand command')
+			taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',[self,'Command not understood.'])
 			
 	def send_latest_id(self,task):
+		''' This functions responds to the client and sends the ID of the exo that has been added last. '''
 		self.cWriter.send(":"+self.exo_ids_in_order[-1],self.activeConnections[-1])
 		return Task.done
 		
-	def send_delete_confirmation(self,task):
-		self.cWriter.send(":Deleted",self.activeConnections[-1])
+	def send_message(self,task,message):
+		''' This function responds to the client and sends a specified message. '''
+		self.cWriter.send(":"+message,self.activeConnections[-1])
 		return Task.done
 		
 	def addExoTask(self,task,type,data):
@@ -447,7 +452,7 @@ class ProgramLogic():
 			taskMgr.add(self.exos[rand_id].getDataTask, "moveTask")
 			self.exos[rand_id].exo.reparentTo(self.rootNode)
 			
-		print(len(self.exos),self.exo_ids_in_order[-1])
+		print("MESSAGE: # Exos in scene: "+ str(len(self.exos)) +"; Last id: "+self.exo_ids_in_order[-1])
 		return Task.done
 		
 	def removeExoTask(self,task,id):
@@ -469,7 +474,6 @@ class ProgramLogic():
 			# Remove the id of the Exo from ProgramLogic
 			del self.exo_ids_in_order[self.exo_ids_in_order.index(id)]
 			
-		print(len(self.exos))
 		return Task.done
 	
 	def create_exo_model(self):
@@ -518,6 +522,7 @@ class ProgramLogic():
 	
 # class DataControllerPlayback():
 # Playback predefined trajectory at the correct speed
+#FIXME This is not necessary! Instead a DataControllerRealTime should be created and the client should read a file and send it via TCP
 
 # class DataControllerRealTime():
 # A roboter that gets data via UDP
