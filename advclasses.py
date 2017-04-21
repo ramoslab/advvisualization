@@ -334,21 +334,74 @@ class ProgramLogic():
 			# snagged this data before we did
 			if self.cReader.getData(datagram):
 				print("Data received")
-				self.test_tcp(datagram)
-				self.cWriter.send("test",self.activeConnections[-1])
+				self.parse_commands(datagram)
 		
 		return Task.cont
 		
 	def tskTerminateConnections(self,taskdata):
+		connections_exist = False
 		for client in self.activeConnections:
-			cReader.removeConnection(client)
+			self.cReader.removeConnection(client)
+			connections_exist = True
 			
-		self.activeConnections = []
-		self.cManager.closeConnection(tcpSocket)
+		if connections_exist:
+			self.activeConnections = []
+			self.cManager.closeConnection(self.tcpSocket)
+		
+		return Task.done
 	
 	def test_tcp(self,datagram):
+		# Return ID of exo to be able to remove that exo later
 		print(datagram)
-	
+		
+	def parse_commands(self,datagram):
+		command = datagram.getMessage()
+		print(command)
+		
+		comm_parts = command.split(" ")
+		
+		if len(comm_parts) < 2:
+			print('did not understand command')
+			return
+		
+		if comm_parts[0] == 'ADD':
+			exotype = comm_parts[1]
+
+			if exotype == 'EXOSTATIC':
+				if len(comm_parts) < 3:
+					print('invalid command')
+				else:
+					exoparams = comm_parts[2].split(",")
+					if len(exoparams) < 7:
+						print('Not enough parameters')
+					elif len(exoparams) > 7:
+						print('Too many parameters')
+					else:
+						print('Adding exo of type',exotype)
+						taskMgr.add(self.addExoTask, "addExoTask", extraArgs = [self,"static",exoparams])
+						
+						# Send ID of the last added exo back to the client
+						
+						print(self.exos)
+					
+						taskMgr.doMethodLater(2,self.send_latest_id,'Send_Latest_Exo_id')
+						
+					print(exoparams)
+			
+		elif comm_parts[0] == 'DELETE':
+			id = int(comm_parts[1])
+			
+			print('Deleting exo',id)
+			taskMgr.add(self.addExoTask, "removeExoTask", extraArgs = [self,id])
+			
+			print('deleting EXO')
+		else:
+			print('did not understand command')
+			
+	def send_latest_id(self,task):
+		self.cWriter.send(":"+str(len(self.exos)-1),self.activeConnections[-1])
+		return Task.done
+		
 	def CommandListenerTask(self,task):
 		''' Task that listens to UDP for commands.'''
 		
@@ -383,7 +436,7 @@ class ProgramLogic():
 			modeldata = self.create_exo_model()
 			
 			# Create logic objects
-			dc = ExoDataControllerStatic(1,3,20,0,180,-10,10)
+			dc = ExoDataControllerStatic(int(data[0]),int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5]),int(data[6]))
 			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic

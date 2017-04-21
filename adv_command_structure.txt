@@ -1,0 +1,48 @@
+Specification of how to control the program for the advanced feedback through the TCP connection.
+
+# ### Command table ### #
+
+ADD - Add new exo
+Command structure:
+ADD EXOTYPE PARAMETERS
+
+Parameters:
+Exotype - String that specifies the type of the exo to be added
+Parameters - Parameters needed by that exo type
+
+DELETE - Delete exo
+Command structure:
+DELETE EXOID
+
+Parameters
+Exoid - Id of the exo to be removed
+
+# ### Exotypes ### #
+
+EXOSTATIC - Add new exo that stays at a static position
+Parameters:
+List of positions and parameters, separated by commas.
+X-Position of the base,
+y-Position of the base,
+heading of the base,
+roll of the pronation module,
+heading of the index finger,
+heading of the finger group,
+heading of the thumb
+
+Explanation:
+This exo stays at the specified position until it is removed from the scene or the program ends. It can be used for specifying the target position the patients have to reach.
+
+EXOKEYBOARD - Add new exo that is controlled by the keyboard
+Parameters:
+- none -
+
+Explanation:
+Focus the window that shows the 3D visualisation (e.g. move the mouse to the window that shows the feedback and click). All keyboard controlled exos are controlled by the keyboard. Arrow keys control heading and movement direction of the base. Pronation and supination are controlled by "r" and "f", index, finger group and the thumb are controlled by "q" and "a", "w" and "s" and "e" and "r", respectively.
+
+EXOTCP - Add new exo that listens to data coming from a tcp connection
+Parameters:
+TCP_IP = (Default: 127.0.0.1)
+TCP_PORT = (Default: 9901)
+
+Explanation:

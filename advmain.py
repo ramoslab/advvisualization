@@ -1,6 +1,7 @@
 # Panda3d for the advanced feedback of the robot
 
 import advclasses as advclass
+import sys
 
 from math import pi, sin, cos, sqrt
 
@@ -53,6 +54,7 @@ class MyApp(ShowBase):
 		
 		self.accept('f10',self.acceptExoTask,[pl])
 		self.accept('f11',self.removeExoTask,[pl])
+		self.accept('escape', self.exit_feedback, [pl])
 		
 		taskMgr.add(pl.tskListenerPolling, "tcp_establish")
 		taskMgr.add(pl.tskReaderPolling, "tcp_poll")
@@ -88,57 +90,11 @@ class MyApp(ShowBase):
 		self.render.setLight(alnp)
 		self.render.setLight(plnp)
 		self.mat.reparentTo(self.render)
-	
-	def load_objects(self):
-
-		data = self.add_exo()
 		
-		# Reparent models
-		self.objects.append(data)
-		self.objects[0]['exo'].reparentTo(self.render)
-		
-	def create_exo_model(self):
-		''' Function that loads an exo model '''
-		# Load models
-		data = {}
-		data['exo'] = loader.loadModel('models/exo3_base.egg')
-		data['arm_rest'] = loader.loadModel('models/exo3_arm_rest.egg')
-		data['prono'] = loader.loadModel('models/exo3_prono.egg')
-		data['fthumb'] = loader.loadModel('models/exo3_fthumb.egg')
-		data['fgroup'] = loader.loadModel('models/exo3_fgroup.egg')
-		data['findex'] = loader.loadModel('models/exo3_findex.egg')
-	
-		# Define and set materials
-		exoMaterial = Material()
-		exoMaterial.setShininess(5.0)
-		exoMaterial.setAmbient((0.6,0.6,0.6,1))
-		exoMaterial.setDiffuse((0.5,0.5,0.5,1))
-		
-		armMaterial = Material()
-		armMaterial.setShininess(12.0)
-		armMaterial.setAmbient((0.6,0.6,0.6,1))
-		armMaterial.setDiffuse((0.3,0.3,0.3,1))
-		
-		data['exo'].setMaterial(exoMaterial)
-		data['arm_rest'].setMaterial(armMaterial)
-		data['prono'].setMaterial(armMaterial)
-		
-		# Set model properties
-		data['prono'].setPos(0.1,1.8,1.5)
-		data['prono'].setP(0)
-		data['fthumb'].setPos(-0.5,0.3,0.5)
-		data['fgroup'].setPos(0.6,0.3,0.3)
-		data['fgroup'].setH(120)
-		data['findex'].setPos(0.6,0.3,1)
-		data['findex'].setH(120)
-		
-		data['arm_rest'].reparentTo(data['exo'])
-		data['prono'].reparentTo(data['arm_rest'])
-		data['fthumb'].reparentTo(data['prono'])
-		data['fgroup'].reparentTo(data['prono'])
-		data['findex'].reparentTo(data['prono'])
-		
-		return data
+	def exit_feedback(self,pl):
+		taskMgr.add(pl.tskTerminateConnections, "tcp_disconnect")
+		print('Good bye!')
+		sys.exit()
 		
 app = MyApp()
 app.run()
