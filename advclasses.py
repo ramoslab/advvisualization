@@ -426,19 +426,33 @@ class ProgramLogic():
 			if exotype == 'EXOSTATIC':
 				if len(comm_parts) < 3:
 					print('MESSAGE: Invalid command')
+					taskMgr.doMethodLater(0.5,self.send_message,'Invalid command',extraArgs = ['Invalid command.',connection])
 				else:
-					exoparams = comm_parts[2].split(",")
+					try:
+						exoparams = comm_parts[2].split(",")
+					except:
+						print('ERROR: did not understand command')
+						taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',extraArgs = ['Not enough parameters.',connection])
 					if len(exoparams) < 7:
 						print('MESSAGE: Not enough parameters')
+						taskMgr.doMethodLater(0.5,self.send_message,'Send_parameters_wrong',extraArgs = ['Not enough parameters.',connection])
 					elif len(exoparams) > 7:
 						print('MESSAGE: Too many parameters')
+						taskMgr.doMethodLater(0.5,self.send_message,'Send_parameters_wrong',extraArgs = ['Too many paramters.',connection])
 					else:
 						print('MESSAGE: Adding exo of type ' + exotype)
 
-						taskMgr.add(self.addExoTask, "addExoTask",extraArgs = ["static",exoparams])
+						try:
+							# Convert input strings to floats
+							exoparams_num = [ float(x) for x in exoparams ]
+							# Add exo
+							taskMgr.add(self.addExoTask, "addExoTask",extraArgs = ["static",exoparams_num])
+							# Send ID of the last added exo back to the client
+							taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+						except:
+							print('ERROR: Could not convert input data. Please only use numbers!')
+							taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',extraArgs = ['Could not convert input data. Please only use numbers!',connection])
 						
-						# Send ID of the last added exo back to the client
-						taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
 			elif exotype == 'EXOREALTIME':
 				if len(comm_parts) < 2:
 					print('MESSAGE: Invalid command')
@@ -476,8 +490,13 @@ class ProgramLogic():
 					print('MESSAGE: Too many parameters')
 				else:
 					# Cast input strings to int
-					exoparams_num = [ int(x) for x in exoparams ]
-					self.exos[id].dc.set_data(exoparams_num)
+					try:
+						exoparams_num = [ float(x) for x in exoparams ]
+						self.exos[id].dc.set_data(exoparams_num)
+					except:
+						print('ERROR: Could not convert input data. Please only use numbers!')
+						taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',extraArgs = ['Could not convert input data. Please only use numbers!',connection])
+					
 			except:
 				print("MESSAGE: Moving robot "+id+" failed.")
 			
@@ -524,8 +543,10 @@ class ProgramLogic():
 			# Create unique ID for exo
 			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
 			
+			print(data)
+			
 			# Create logic objects
-			dc = ExoDataControllerStatic(rand_id)
+			dc = ExoDataControllerStatic(rand_id,data[0],data[1],data[2],data[3],data[4],data[5],data[6])
 			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
