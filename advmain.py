@@ -60,7 +60,7 @@ class MyApp(ShowBase):
 		self.camera.setHpr(0,-25,0)
 		
 		# Floor mat
-		self.mat = loader.loadModel('models/mat.egg')
+		self.mat = loader.loadModel('models/mat')
 		
 		# Reparent objects
 		self.render.setLight(alnp)

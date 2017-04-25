@@ -525,7 +525,7 @@ class ProgramLogic():
 			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
 			
 			# Create logic objects
-			dc = ExoDataControllerKeyboard(rand_id)
+			dc = ExoDataControllerStatic(rand_id)
 			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
@@ -582,12 +582,12 @@ class ProgramLogic():
 		''' Function that loads an exo model '''
 		# Load models
 		data = {}
-		data['exo'] = loader.loadModel('models/exo3_base.egg')
-		data['arm_rest'] = loader.loadModel('models/exo3_arm_rest.egg')
-		data['prono'] = loader.loadModel('models/exo3_prono.egg')
-		data['fthumb'] = loader.loadModel('models/exo3_fthumb.egg')
-		data['fgroup'] = loader.loadModel('models/exo3_fgroup.egg')
-		data['findex'] = loader.loadModel('models/exo3_findex.egg')
+		data['exo'] = loader.loadModel('models/exo3_base')
+		data['arm_rest'] = loader.loadModel('models/exo3_arm_rest')
+		data['prono'] = loader.loadModel('models/exo3_prono')
+		data['fthumb'] = loader.loadModel('models/exo3_fthumb')
+		data['fgroup'] = loader.loadModel('models/exo3_fgroup')
+		data['findex'] = loader.loadModel('models/exo3_findex')
 	
 		# Define and set materials
 		exoMaterial = Material()
