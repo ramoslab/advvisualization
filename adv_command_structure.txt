@@ -2,12 +2,13 @@ Specification of how to control the program for the advanced feedback and how to
 
 # ### Command table ### #
 
-ADD - Add new exo
+ADDEXO - Add new exo
 Command structure:
-ADD EXOTYPE PARAMETERS
+ADDEXO EXOTYPE HANDEDNESS PARAMETERS
 
 Parameters:
 Exotype - String that specifies the type of the exo to be added
+Handedness - String (either "lefthanded" or "righthanded") that specifies the type of arm that should be added
 Parameters - Parameters needed by that exo type
 
 DELETE - Delete exo
@@ -24,6 +25,21 @@ DATA EXOID PARAMETERS
 Parameters:
 Exoid - The unique Id of the exo
 Parameters - Parameters of the degrees of freedom, like for the EXOSTATIC type: BaseXpos,BaseYpos,BaseHeading,PronoRoll,IndexHeading,GroupHeading,ThumbHeading
+
+TOGGLEMAT - Add or change the mat. If a mat already exists in the scene this mat is replaced.
+Command structure:
+TOGGLEMAT HANDEDNESS
+
+Paramters:
+Handedness - String (either "lefthanded" or "righthanded") that specifies the type of the mat to be added.
+
+ADDBASE - Add an exo that only consists of the base and the armrest without the fingers.
+Command structure
+ADDBASE
+
+EXIT - End visualisation (close Panda3D)
+Command structure:
+EXIT
 
 
 # ### Exotypes ### #

@@ -8,8 +8,11 @@ from direct.task import Task
 
 import random
 import string
+import sys
 
 # ### Begin ### #
+
+# ### Logic controllers ### #
 
 class ExoLogic():
 	''' Logic for the movement of the Exo '''
@@ -42,14 +45,40 @@ class ExoLogic():
 		self.fthumb.setH(data[4]['heading'])
 		
 		return Task.cont
+		
+class BaseLogic():
+	''' Logic for the movement of the Base '''
+	
+	def __init__(self,exo_model,dataController):
+		self.exo = exo_model
+			
+		self.dc = dataController
+		
+	def getDataTask(self,task):
+		''' This is the task the handles the movement of the exo model. '''
+		
+		# Retrieve the data from the controller
+		exo_state = (self.exo.getX(),self.exo.getY(),self.exo.getH())
+		data = self.dc.get_data(exo_state)
+		
+		# Set parameters of the base
+		self.exo.setX(data['x'])
+		self.exo.setY(data['y'])
+		self.exo.setH(data['heading'])
+		
+		return Task.cont
 
 # ### Data controllers ### #		
 
 class ExoDataControllerKeyboard():
 	''' A DataController that returns the robot position according to the keyboard input '''
 	
-	def __init__(self,id):
+	def __init__(self,id,handedness):
 		self.id = id
+		if handedness == 'righthanded':
+			self.handedness_switch = 1
+		else:
+			self.handedness_switch = -1
 		
 		self.robot = {}
 		self.prono = {}
@@ -238,24 +267,42 @@ class ExoDataControllerKeyboard():
 			
 	def compute_findex(self,dir,exo_state):
 		''' Turn the index fingers '''
-		if dir == 'open':
-			return (exo_state[4] - 2)%360
+		if self.handedness_switch == 1:
+			if dir == 'open':
+				return (exo_state[4] - 2)%360
+			else:
+				return (exo_state[4] + 2)%360
 		else:
-			return (exo_state[4] + 2)%360
+			if dir == 'open':
+				return (exo_state[4] + 2)%360
+			else:
+				return (exo_state[4] - 2)%360
 			
 	def compute_fgroup(self,dir,exo_state):
 		''' Turn the finger group '''
-		if dir == 'open':
-			return (exo_state[5] - 2)%360
+		if self.handedness_switch == 1:
+			if dir == 'open':
+				return (exo_state[5] - 2)%360
+			else:
+				return (exo_state[5] + 2)%360
 		else:
-			return (exo_state[5] + 2)%360
+			if dir == 'open':
+				return (exo_state[5] + 2)%360
+			else:
+				return (exo_state[5] - 2)%360
 			
 	def compute_fthumb(self,dir,exo_state):
 		''' Turn the thumb '''
-		if dir == 'open':
-			return (exo_state[6] + 2)%360
+		if self.handedness_switch == 1:
+			if dir == 'open':
+				return (exo_state[6] + 2)%360
+			else:
+				return (exo_state[6] - 2)%360
 		else:
-			return (exo_state[6] - 2)%360
+			if dir == 'open':
+				return (exo_state[6] - 2)%360
+			else:
+				return (exo_state[6] + 2)%360
 			
 	def compute_prono(self,dir,exo_state):
 		''' Pronate or supinate '''
@@ -296,7 +343,7 @@ class ExoDataControllerStatic():
 #FIXME This is not necessary! Instead a DataControllerRealTime should be created and the client should read a file and send it via TCP
 
 class ExoDataControllerRealTime():
-	''' A DataController that returns the position value which it has received through TCP. '''
+	''' A DataController that holds the kinematics data which it has received through TCP. '''
 	
 	def __init__(self, id):
 	
@@ -309,7 +356,6 @@ class ExoDataControllerRealTime():
 		self.fgroup = {}
 		self.fthumb = {}
 		
-				
 	def set_data(self,exo_state):
 		''' Function that sets the parameters of the degrees of freedom of the robot. '''
 		
@@ -322,16 +368,174 @@ class ExoDataControllerRealTime():
 		self.fgroup['heading'] = exo_state[5]
 		self.fthumb['heading'] = exo_state[6]
 		
-		
 	def get_data(self,exo_state):
 		''' Function that returns the position data to the exo logic object '''
 		
 		return (self.robot,self.prono,self.findex,self.fgroup,self.fthumb)
 		
+class BaseDataControllerKeyboard():
+	''' A DataController that is used to control the kinematics of an exo that has only a base and no arm position according to the keyboard input. '''
+	
+	def __init__(self,id):
+		self.id = id
 		
+		self.robot = {}
+		
+		self.robot['x'] = 0
+		self.robot['y'] = 0
+		self.robot['heading'] = 0
+				
+	def get_data(self,exo_state):
+		''' Function that returns the position data to the exo logic object '''
+		self.move(exo_state)
+		
+		return (self.robot)
+	
+	def move(self,exo_state):
+		''' Polls the keys and executes the functions that compute the target positions '''
+		# Initialise polling
+		is_down = base.mouseWatcherNode.is_button_down
+		# Define keys
+		b_arrow_up = KeyboardButton.up()
+		b_arrow_down = KeyboardButton.down()
+		b_arrow_left = KeyboardButton.left()
+		b_arrow_right = KeyboardButton.right()
+		
+		# Polling logic and execution of movements
+		
+		# Button "UP" moves robot forward
+		if is_down(b_arrow_up):
+			movement = self.compute_moveExo('forward',exo_state)
+			self.move_x(movement[0])
+			self.move_y(movement[1])
+		
+		# Button "DOWN" moves robot forward
+		if is_down(b_arrow_down):
+			movement = self.compute_moveExo('backward',exo_state)
+			self.move_x(movement[0])
+			self.move_y(movement[1])
+		
+		# Button "LEFT" turns robot to the left
+		if is_down(b_arrow_left):
+			movement = self.compute_turnExo('left',exo_state)
+			self.turn(movement)
+		
+		# Button "RIGHT" moves robot to the right
+		if is_down(b_arrow_right):
+			movement = self.compute_turnExo('right',exo_state)
+			self.turn(movement)
+			
+	# Functions computing and storing the movement
+	def move_x(self,x):
+		self.robot['x'] = x
+	
+	def move_y(self,y):
+		self.robot['y'] = y
+		
+	def turn(self,h):
+		self.robot['heading'] = h
+			
+	def compute_turnExo(self,heading,exo_state):
+		''' Turn the exo toward a target position '''
+		headingOld = exo_state[2]
+		if heading == 'right':
+			return (headingOld - 2)%360
+		elif heading == 'left':
+			return (headingOld + 2)%360
+		
+	def compute_moveExo(self,direction,exo_state):
+		''' Compute the target coordinates of a 2d movement (forward or backward) '''
+		# Get current heading in degrees
+		heading = exo_state[2]
+		if heading < 0:
+			heading = heading + 360
+		
+		# Determine correct direction to turn the robot
+		distx_fact = 1
+		disty_fact = 1
+		
+		beta = 0.0
+		
+		if heading > 0 and heading <= 90:
+			beta = heading
+			distx_fact = 1
+			disty_fact = -1
+		elif heading > 90 and heading <= 180:
+			beta = 180-heading
+			distx_fact = 1
+			disty_fact = 1
+		elif heading > 180 and heading <= 270:
+			beta = heading-180
+			distx_fact = -1
+			disty_fact = 1
+		elif heading > 270 and heading <= 360:
+			beta = 360-heading
+			distx_fact = -1
+			disty_fact = -1
+		elif heading == 0.0:
+			beta = 0.0
+			distx_fact = -1
+			disty_fact = -1
 
-# class DataControllerRealTime():
-# A roboter that gets data via UDP
+		# Compute distance on x and y axis
+		dist = 0.1
+		disty = cos((beta*pi)/180) * dist
+		distx = sqrt(pow(dist,2)-pow(disty,2))
+			
+		distx *= distx_fact
+		disty *= disty_fact
+			
+		# Set new position
+		posOldX = exo_state[0]
+		posOldY = exo_state[1]
+		
+		if direction == 'forward':
+			return (posOldX-distx,posOldY-disty)
+		elif direction == 'backward':
+			return (posOldX+distx,posOldY+disty)
+		
+class BaseDataControllerStatic():
+	''' A DataController that controls an exo that only consists of a base. It is initialised with static kinematics. '''
+	
+	def __init__(self,id,exo_x,exo_y,exo_h):
+		
+		self.id = id
+		
+		self.robot = {}
+		self.prono = {}
+				
+		self.robot['x'] = exo_x
+		self.robot['y'] = exo_y
+		self.robot['heading'] = exo_h
+				
+	def get_data(self,exo_state):
+		''' Function that returns the kinematics data to the base logic object '''
+		
+		return (self.robot)
+		
+class BaseDataControllerRealTime():
+	''' A DataController that is used to control an exo that has only a base and no arm. It receives the kinematics data through TCP. '''
+	
+	def __init__(self, id):
+	
+		self.id = id
+	
+		# Setup exo model
+		self.robot = {}
+		self.prono = {}
+					
+	def set_data(self,exo_state):
+		''' Function that sets the parameters of the degrees of freedom of the robot. '''
+		
+		self.robot['x'] = exo_state[0]
+		self.robot['y'] = exo_state[1]
+		self.robot['heading'] = exo_state[2]
+			
+	def get_data(self,exo_state):
+		''' Function that returns the position data to the exo logic object '''
+		
+		return (self.robot)
+		
 		
 
 # ### Program logic ### #
@@ -402,108 +606,158 @@ class ProgramLogic():
 			self.cManager.closeConnection(self.tcpSocket)
 		
 		return Task.done
-	
+			
 	def parse_commands(self,datagram):
-		''' Function that parses the commands that are received through TCP. '''
+		''' Function that parses the commands that are received through TCP. Only writes back to TCP in two cases:
+		1. If an exo is added the id is written back.
+		2. If an exo has been removed successfully.'''
 		# Extract message from the data
 		command = datagram.getMessage()
 		connection = datagram.getConnection()
 		print("MESSAGE: Command '"+command+"' received.")
-		
+
+		# Process command
 		comm_parts = command.split(" ")
 		
-		# Check if command has valid length
-		if len(comm_parts) < 2:
-			print('ERROR: did not understand command')
-			taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',extraArgs = ['Command not understood.',connection])
-			return
-		
 		# Check which command is being send
-		# "ADD" command
-		if comm_parts[0] == 'ADD':
-			exotype = comm_parts[1]
-			# Check which type of exo should be added
-			if exotype == 'EXOSTATIC':
-				if len(comm_parts) < 3:
-					print('MESSAGE: Invalid command')
-					taskMgr.doMethodLater(0.5,self.send_message,'Invalid command',extraArgs = ['Invalid command.',connection])
-				else:
-					try:
-						exoparams = comm_parts[2].split(",")
-					except:
-						print('ERROR: did not understand command')
-						taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',extraArgs = ['Not enough parameters.',connection])
-					if len(exoparams) < 7:
-						print('MESSAGE: Not enough parameters')
-						taskMgr.doMethodLater(0.5,self.send_message,'Send_parameters_wrong',extraArgs = ['Not enough parameters.',connection])
-					elif len(exoparams) > 7:
-						print('MESSAGE: Too many parameters')
-						taskMgr.doMethodLater(0.5,self.send_message,'Send_parameters_wrong',extraArgs = ['Too many paramters.',connection])
+		try:
+			# "ADDEXO" command
+			if comm_parts[0] == 'ADDEXO':
+				exotype = comm_parts[1]
+				# Check which type of exo should be added
+				if exotype == 'EXOSTATIC':
+					if len(comm_parts) < 4:
+						raise TypeError('Not enough command parameters supplied.')
 					else:
-						print('MESSAGE: Adding exo of type ' + exotype)
+						exoparams = comm_parts[3].split(",")
+						if len(exoparams) != 7:
+							raise TypeError('Wrong number of kinematics parameters supplied.')
+						else:
+							# Check handedness
+							handedness = comm_parts[2]
+							print(handedness)
+							if not(handedness == 'RIGHTHANDED' or handedness == 'LEFTHANDED'):
+								raise ValueError('Handedness '+handedness+' not recognised. Please use either "lefthanded" or "righthanded".')
 
-						try:
 							# Convert input strings to floats
-							exoparams_num = [ float(x) for x in exoparams ]
+							try:
+								exoparams_num = [ float(x) for x in exoparams ]
+							except TypeError:
+								raise
+							
+							print('MESSAGE: Adding exo of type ' + exotype + '(' + handedness + ').')
+							
 							# Add exo
-							taskMgr.add(self.addExoTask, "addExoTask",extraArgs = ["static",exoparams_num])
+							taskMgr.add(self.addExoTask, "addExoTask",extraArgs = [("static",handedness.lower()),exoparams_num])
 							# Send ID of the last added exo back to the client
 							taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
-						except:
-							print('ERROR: Could not convert input data. Please only use numbers!')
-							taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',extraArgs = ['Could not convert input data. Please only use numbers!',connection])
-						
-			elif exotype == 'EXOREALTIME':
-				if len(comm_parts) < 2:
-					print('MESSAGE: Invalid command')
-				else:
-					print('MESSAGE: Adding exo of type ' + exotype)
+							
+				elif exotype == 'EXOREALTIME':
+					if len(comm_parts) < 3:
+						raise TypeError('Not enough command parameters supplied.')
+					else:
+						# Check handedness
+						handedness = comm_parts[2]
+						if not(handedness == 'RIGHTHANDED' or handedness == 'LEFTHANDED'):
+							raise ValueError('Handedness '+handedness+' not recognised. Please use either "lefthanded" or "righthanded".')
+							
+						print('MESSAGE: Adding exo of type ' + exotype + '(' + handedness + ').')
 
-					taskMgr.add(self.addExoTask, "addExoTask",extraArgs = ["realtime",""])
+						taskMgr.add(self.addExoTask, "addExoTask",extraArgs = [("realtime",handedness.lower()),""])
+						# Send ID of the last added exo back to the client
+						taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
 						
-					# Send ID of the last added exo back to the client
-					taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
-					
-		# "DELETE" command
-		elif comm_parts[0] == 'DELETE':
-			# Get the id of the exo
-			id = comm_parts[1]
-			if id in self.exos:
-				print('MESSAGE: Deleting exo: '+id)
-				taskMgr.add(self.removeExoTask, "removeExoTask", extraArgs = [id])
-			
-				taskMgr.doMethodLater(0.5,self.send_message,'Send_delete_confirmation',extraArgs = ['Deleted exo '+id,connection])
-			else:
-				print("MESSAGE: ID " + id + " not found.")
-				taskMgr.doMethodLater(0.5,self.send_message,'Send_delete_not_found',extraArgs = ['Exo '+id+' not found.',connection])
-			
-		# "DATA" command
-		elif comm_parts[0] == 'DATA':
-			# Get the id of the exo
-			id = comm_parts[1]
-			# Check if this exo is of type RealTime (implicitely by using catching exceptions)
-			try:
-				exoparams = comm_parts[2].split(",")
-				if len(exoparams) < 7:
-					print('MESSAGE: Not enough parameters')
-				elif len(exoparams) > 7:
-					print('MESSAGE: Too many parameters')
+			# "DELETE" command
+			elif comm_parts[0] == 'DELETE':
+				# Get the id of the exo
+				id = comm_parts[1]
+				if id in self.exos:
+					print('MESSAGE: Deleting exo: '+id)
+					taskMgr.add(self.removeExoTask, "removeExoTask", extraArgs = [id])
+					taskMgr.doMethodLater(0.5,self.send_message,'Send_delete_confirmation',extraArgs = ['DELETED:'+id,connection])
 				else:
-					# Cast input strings to int
+					print("MESSAGE: ID " + id + " not found.")
+				
+			# "ADDBASE" command
+			if comm_parts[0] == 'ADDBASE':
+				exotype = comm_parts[1]
+				# Check which type of exo should be added
+				if exotype == 'EXOSTATIC':
+					if len(comm_parts) < 3:
+						raise TypeError('Not enough command parameters supplied.')
+					else:
+						exoparams = comm_parts[2].split(",")
+						if len(exoparams) != 3:
+							raise TypeError('Wrong number of kinematics parameters supplied.')
+						else:
+							# Convert input strings to floats
+							try:
+								exoparams_num = [ float(x) for x in exoparams ]
+							except TypeError:
+								raise
+							
+							print('MESSAGE: Adding exo (base only) of type ' + exotype +'.')
+							
+							# Add exo
+							taskMgr.add(self.addBaseTask, "addBaseTask",extraArgs = ["static",exoparams_num])
+							# Send ID of the last added exo back to the client
+							taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+							
+				elif exotype == 'EXOREALTIME':
+					if len(comm_parts) < 2:
+						raise TypeError('Not enough command parameters supplied.')
+					else:
+						print('MESSAGE: Adding exo (base only) of type ' + exotype + '.')
+
+						taskMgr.add(self.addBaseTask, "addBaseTask",extraArgs = ["realtime",""])
+						# Send ID of the last added exo back to the client
+						taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+						
+			# "DATA" command
+			elif comm_parts[0] == 'DATA':
+				# Get the id of the exo
+				id = comm_parts[1]
+				# Check if this exo is of type RealTime (implicitely by catching exceptions)
+				exoparams = comm_parts[2].split(",")
+				if len(exoparams) != 7:
+					raise TypeError('Not enough kinematics parameters supplied.')
+				else:
+					# Convert input strings to floats
 					try:
 						exoparams_num = [ float(x) for x in exoparams ]
+					except TypeError:
+						raise
+
+					if not(id in self.exos):
+						raise KeyError('Id '+id+' of Exo not found.')
+					else:
 						self.exos[id].dc.set_data(exoparams_num)
-					except:
-						print('ERROR: Could not convert input data. Please only use numbers!')
-						taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',extraArgs = ['Could not convert input data. Please only use numbers!',connection])
-					
-			except:
-				print("MESSAGE: Moving robot "+id+" failed.")
+		
+			# "EXIT" command
+			elif comm_parts[0] == 'EXIT':
+				taskMgr.add(self.tskTerminateConnections, "tcp_disconnect")
+				print('Good bye!')
+				sys.exit()
 			
-		# Invalid command
-		else:
-			print('ERROR: did not understand command')
-			taskMgr.doMethodLater(0.5,self.send_message,'Send_error_not_understood',extraArgs = ['Command not understood.',connection])
+			#TODO "MAT" command
+			
+			# Invalid command
+			else:
+				raise TypeError('Invalid command '+command+'.')
+		
+		except TypeError as t:
+			print('ERROR: ' + str(t))
+		except ValueError as v:
+			print('ERROR: ' + str(v))
+		except KeyError as k:
+			print('ERROR: ' + str(k))
+		except IndexError:
+			print('ERROR: Not enough command parameters supplied.')
+			
+	def send_latest_id(self,connection):
+		''' This functions responds to the client and sends the ID of the exo that has been added last. '''
+		self.cWriter.send(":"+self.exo_ids_in_order[-1],connection)
+		return Task.done
 			
 	def send_latest_id(self,connection):
 		''' This functions responds to the client and sends the ID of the exo that has been added last. '''
@@ -519,15 +773,15 @@ class ProgramLogic():
 	def addExoTask(self,type,data):
 		''' Function that adds a new task to the taskmanager. The new task adds a new exo of specified type. '''
 		
-		if type == 'keyboard':
+		if type[0] == 'keyboard':
 			# Load, modify and reparent models
-			modeldata = self.create_exo_model()
+			modeldata = self.create_exo_model(type[1])
 			
 			# Create unique ID for exo
 			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
 			
 			# Create logic objects
-			dc = ExoDataControllerKeyboard(rand_id)
+			dc = ExoDataControllerKeyboard(rand_id,type[1])
 			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
@@ -536,9 +790,9 @@ class ProgramLogic():
 			taskMgr.add(self.exos[rand_id].getDataTask, "moveTask")
 			self.exos[rand_id].exo.reparentTo(self.rootNode)
 			
-		elif type == 'static':
+		elif type[0] == 'static':
 			# Load, modify and reparent models
-			modeldata = self.create_exo_model()
+			modeldata = self.create_exo_model(type[1])
 			
 			# Create unique ID for exo
 			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
@@ -555,9 +809,9 @@ class ProgramLogic():
 			taskMgr.add(self.exos[rand_id].getDataTask, "moveTask")
 			self.exos[rand_id].exo.reparentTo(self.rootNode)
 			
-		elif type == 'realtime':
+		elif type[0] == 'realtime':
 			# Load, modify and reparent models
-			modeldata = self.create_exo_model()
+			modeldata = self.create_exo_model(type[1])
 			
 			# Create unique ID for exo
 			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
@@ -577,6 +831,69 @@ class ProgramLogic():
 			
 		print("MESSAGE: # Exos in scene: "+ str(len(self.exos)) +"; Last id: "+self.exo_ids_in_order[-1])
 		return Task.done
+		
+	def addBaseTask(self,type,data):
+		''' Function that adds a new task to the taskmanager. The new task adds a new base of specified type. '''
+		
+		if type == 'keyboard':
+			# Load, modify and reparent models
+			modeldata = self.create_exo_model_base()
+			
+			# Create unique ID for exo
+			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
+			
+			# Create logic objects
+			dc = BaseDataControllerKeyboard(rand_id)
+			exo = BaseLogic(modeldata['exo'],dc)
+			
+			# Add Exo to the program logic
+			self.exos[rand_id] = exo
+			self.exo_ids_in_order.append(rand_id)
+			taskMgr.add(self.exos[rand_id].getDataTask, "moveTask")
+			self.exos[rand_id].exo.reparentTo(self.rootNode)
+			
+		elif type == 'static':
+			# Load, modify and reparent models
+			modeldata = self.create_exo_model_base()
+			
+			# Create unique ID for exo
+			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
+			
+			print(data)
+			
+			# Create logic objects
+			dc = BaseDataControllerStatic(rand_id,data[0],data[1],data[2])
+			exo = BaseLogic(modeldata['exo'],dc)
+			
+			# Add Exo to the program logic
+			self.exos[rand_id] = exo
+			self.exo_ids_in_order.append(rand_id)
+			taskMgr.add(self.exos[rand_id].getDataTask, "moveTask")
+			self.exos[rand_id].exo.reparentTo(self.rootNode)
+			
+		elif type == 'realtime':
+			# Load, modify and reparent models
+			modeldata = self.create_exo_model_base()
+			
+			# Create unique ID for exo
+			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
+			
+			# Create logic objects
+			dc = BaseDataControllerRealTime(rand_id)
+			# Set initial data
+			exo_initial_state = (0,0,0)
+			dc.set_data(exo_initial_state)
+			exo = BaseLogic(modeldata['exo'],dc)
+			
+			# Add Exo to the program logic
+			self.exos[rand_id] = exo
+			self.exo_ids_in_order.append(rand_id)
+			taskMgr.add(self.exos[rand_id].getDataTask, "moveTask")
+			self.exos[rand_id].exo.reparentTo(self.rootNode)
+			
+		print("MESSAGE: # Exos in scene: "+ str(len(self.exos)) +"; Last id: "+self.exo_ids_in_order[-1])
+		return Task.done
+		
 		
 	def removeExoTask(self,id):
 		''' Removes specific exo from program logic (and secene). '''
@@ -599,16 +916,42 @@ class ProgramLogic():
 			
 		return Task.done
 	
-	def create_exo_model(self):
-		''' Function that loads an exo model '''
+	###TODO: ADD Mat left/right
+	###TODO: REMOVE Mat
+	
+	def create_exo_model(self,handedness):
+		''' Function that loads an exo model with left or right hand arm. '''
 		# Load models
 		data = {}
 		data['exo'] = loader.loadModel('models/exo3_base')
 		data['arm_rest'] = loader.loadModel('models/exo3_arm_rest')
-		data['prono'] = loader.loadModel('models/exo3_prono')
-		data['fthumb'] = loader.loadModel('models/exo3_fthumb')
-		data['fgroup'] = loader.loadModel('models/exo3_fgroup')
-		data['findex'] = loader.loadModel('models/exo3_findex')
+		
+		if handedness == 'righthanded':
+			data['fthumb'] = loader.loadModel('models/exo3_fthumb_right')
+			data['fgroup'] = loader.loadModel('models/exo3_fgroup_right')
+			data['findex'] = loader.loadModel('models/exo3_findex_right')
+			data['prono'] = loader.loadModel('models/exo3_prono_right')
+			
+			data['prono'].setPos(0.1,1.8,1.5)
+			data['prono'].setP(0)
+			data['fthumb'].setPos(-0.5,0.3,0.5)
+			data['fgroup'].setPos(0.6,0.3,0.3)
+			data['fgroup'].setH(120)
+			data['findex'].setPos(0.6,0.3,1)
+			data['findex'].setH(120)
+		else:
+			data['fthumb'] = loader.loadModel('models/exo3_fthumb_left')
+			data['fgroup'] = loader.loadModel('models/exo3_fgroup_left')
+			data['findex'] = loader.loadModel('models/exo3_findex_left')
+			data['prono'] = loader.loadModel('models/exo3_prono_left')
+			
+			data['prono'].setPos(0.1,1.8,1.5)
+			data['prono'].setP(0)
+			data['fthumb'].setPos(0.5,0.3,0.5)
+			data['fgroup'].setPos(-0.6,0.3,0.3)
+			data['fgroup'].setH(120)
+			data['findex'].setPos(-0.6,0.3,1)
+			data['findex'].setH(120)
 	
 		# Define and set materials
 		exoMaterial = Material()
@@ -621,23 +964,47 @@ class ProgramLogic():
 		armMaterial.setAmbient((0.6,0.6,0.6,1))
 		armMaterial.setDiffuse((0.3,0.3,0.3,1))
 		
+		data['exomaterial'] = exoMaterial
+		data['armmaterial'] = armMaterial
+		
 		data['exo'].setMaterial(exoMaterial)
 		data['arm_rest'].setMaterial(armMaterial)
 		data['prono'].setMaterial(armMaterial)
 		
-		# Set model properties
-		data['prono'].setPos(0.1,1.8,1.5)
-		data['prono'].setP(0)
-		data['fthumb'].setPos(-0.5,0.3,0.5)
-		data['fgroup'].setPos(0.6,0.3,0.3)
-		data['fgroup'].setH(120)
-		data['findex'].setPos(0.6,0.3,1)
-		data['findex'].setH(120)
-		
+		# Reparent objects		
 		data['arm_rest'].reparentTo(data['exo'])
 		data['prono'].reparentTo(data['arm_rest'])
 		data['fthumb'].reparentTo(data['prono'])
 		data['fgroup'].reparentTo(data['prono'])
 		data['findex'].reparentTo(data['prono'])
+		
+		return data
+		
+	def create_exo_model_base(self):
+		''' Function that loads an exo model without arm. '''
+		# Load models
+		data = {}
+		data['exo'] = loader.loadModel('models/exo3_base')
+		data['arm_rest'] = loader.loadModel('models/exo3_arm_rest')
+		
+		# Define and set materials
+		exoMaterial = Material()
+		exoMaterial.setShininess(5.0)
+		exoMaterial.setAmbient((0.6,0.6,0.6,1))
+		exoMaterial.setDiffuse((0.5,0.5,0.5,1))
+		
+		armMaterial = Material()
+		armMaterial.setShininess(12.0)
+		armMaterial.setAmbient((0.6,0.6,0.6,1))
+		armMaterial.setDiffuse((0.3,0.3,0.3,1))
+		
+		data['exomaterial'] = exoMaterial
+		data['armmaterial'] = armMaterial
+		
+		data['exo'].setMaterial(exoMaterial)
+		data['arm_rest'].setMaterial(armMaterial)
+		
+		# Reparent objects		
+		data['arm_rest'].reparentTo(data['exo'])
 		
 		return data

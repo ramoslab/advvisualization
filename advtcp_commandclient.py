@@ -26,9 +26,9 @@ while sendmessage:
 		sendmessage = False
 
 	# Do not expect feedback message from server if the DATA command was sent
-	if MESSAGE.split(" ")[0] != 'DATA':
-		data = s.recv(BUFFER_SIZE)
-		print("Received:", data.decode().split(":")[1])
+	#if MESSAGE.split(" ")[0] != 'DATA':
+		#data = s.recv(BUFFER_SIZE)
+		#print("Received:", data.decode().split(":")[1])
 
 # Close connection
 s.close()

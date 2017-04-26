@@ -28,20 +28,27 @@ class MyApp(ShowBase):
 		self.build_scene()
 		
 		# Set accepted keys for keyboard control of the program logic
-		self.accept('f10',self.addExoTask,[pl])
-		self.accept('f11',self.removeExoTask,[pl])
+		self.accept('f10',self.addExoTask,[pl,'lefthanded'])
+		self.accept('f9',self.addBaseTask,[pl])
+		self.accept('f11',self.addExoTask,[pl,'righthanded'])
+		self.accept('f12',self.removeExoTask,[pl])
 		self.accept('escape', self.exit_feedback, [pl])
 		
 		taskMgr.add(pl.tskListenerPolling, "tcp_establish")
 		taskMgr.add(pl.tskReaderPolling, "tcp_poll")
 		
-	def addExoTask(self,pl):
+	def addExoTask(self,pl,handedness):
 		### Temporary function for testing ###
-		taskMgr.add(pl.addExoTask,'addExoTask', extraArgs = ['keyboard',""])
+		
+		taskMgr.add(pl.addExoTask,'addExoTask', extraArgs = [('keyboard',handedness),""])
 		
 	def removeExoTask(self,pl):
 		### Temporary function for testing ###
 		taskMgr.add(pl.removeExoTask,'removeExoTask', extraArgs = ['last'])
+		
+	def addBaseTask(self,pl):
+		### Temporary function for testing ###
+		taskMgr.add(pl.addBaseTask,'addBaseTask', extraArgs = ['keyboard',""])
 		
 		
 	def build_scene(self):
