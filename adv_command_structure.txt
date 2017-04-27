@@ -30,12 +30,27 @@ TOGGLEMAT - Add or change the mat. If a mat already exists in the scene this mat
 Command structure:
 TOGGLEMAT HANDEDNESS
 
-Paramters:
+Parameters:
 Handedness - String (either "lefthanded" or "righthanded") that specifies the type of the mat to be added.
 
 ADDBASE - Add an exo that only consists of the base and the armrest without the fingers.
 Command structure
 ADDBASE
+
+SETCOLOR - Set the color of an exo
+Command structure:
+SETCOLOR EXOID COLOR
+
+Parameters:
+Exoid - The unique id of the exo
+Color - An RGB color in the format red,green,blue (values from 0 to 1)
+
+TOGGLETRANSPARENCY - Toggle transparency of an exo
+Command structure:
+TOGGLETRANSPARENCY EXOID
+
+Parameters:
+Exoid - The unique id of the exo
 
 EXIT - End visualisation (close Panda3D)
 Command structure:

@@ -14,18 +14,57 @@ import sys
 
 # ### Logic controllers ### #
 
-class ExoLogic():
-	''' Logic for the movement of the Exo '''
+class Logic(object):
+	''' Superclass for the logic that controls exos and bases. '''
+	
+	def __init__(self,exo_model,dataController):
+		self.exo = exo_model
+		
+		self.dc = dataController
+		
+		self.modelTransparencySet = False
+		
+	def setColorTask(self,color):
+		''' This task sets to color (lighting) of the exo model. '''
+		
+		exoMaterial = self.exo.getMaterial()
+		exoMaterial.setAmbient((color[0],color[1],color[2],1))
+		self.exo.setMaterial(exoMaterial)
+		
+		return Task.done
+	
+	def toggleTransparencyTask(self,task):
+		''' This task toggles the transparency of the exo model. '''
+		
+		self.modelTransparencySet = not self.modelTransparencySet
+		
+		if self.modelTransparencySet:
+			self.exo.setColorScale((1,1,1,0.65))
+			self.exo.setTransparency(TransparencyAttrib.MDual)
+			tmpMat = self.exo.getMaterial()
+			tmpMat.setDiffuse((0.25,0.25,0.25,1))
+			self.exo.setMaterial(tmpMat)
+		else:
+			self.exo.setColorScaleOff()
+			self.exo.setTransparency(TransparencyAttrib.MNone)		
+			tmpMat = self.exo.getMaterial()
+			tmpMat.setDiffuse((0.25,0.25,0.25,.25))
+			self.exo.setMaterial(tmpMat)
+		
+		return Task.done
+
+class ExoLogic(Logic):
+	''' Logic for the movement of the Exo. Inherits from Logic. '''
 	
 	def __init__(self,exo_model,exo_prono,findex_model,fgroup_model,fthumb_model,dataController):
-		self.exo = exo_model
+	
+		super(ExoLogic, self).__init__(exo_model,dataController)
+		
 		self.prono = exo_prono
 		self.findex = findex_model
 		self.fgroup = fgroup_model
 		self.fthumb = fthumb_model
 			
-		self.dc = dataController
-		
 	def getDataTask(self,task):
 		''' This is the task the handles the movement of the exo model. '''
 		
@@ -45,14 +84,12 @@ class ExoLogic():
 		self.fthumb.setH(data[4]['heading'])
 		
 		return Task.cont
-		
-class BaseLogic():
+	
+class BaseLogic(Logic):
 	''' Logic for the movement of the Base '''
 	
 	def __init__(self,exo_model,dataController):
-		self.exo = exo_model
-			
-		self.dc = dataController
+		super(BaseLogic, self).__init__(exo_model,dataController)
 		
 	def getDataTask(self,task):
 		''' This is the task the handles the movement of the exo model. '''
@@ -715,9 +752,8 @@ class ProgramLogic():
 						
 			# "DATA" command
 			elif comm_parts[0] == 'DATA':
-				# Get the id of the exo
+				# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
 				id = comm_parts[1]
-				# Check if this exo is of type RealTime (implicitely by catching exceptions)
 				exoparams = comm_parts[2].split(",")
 				if len(exoparams) != 7:
 					raise TypeError('Not enough kinematics parameters supplied.')
@@ -732,6 +768,39 @@ class ProgramLogic():
 						raise KeyError('Id '+id+' of Exo not found.')
 					else:
 						self.exos[id].dc.set_data(exoparams_num)
+						
+			# "SETCOLOR" command
+			elif comm_parts[0] == 'SETCOLOR':
+				# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
+				id = comm_parts[1]
+				colors = comm_parts[2].split(",")
+				if len(colors) != 3:
+					raise TypeError('Not enough color parameters supplied.')
+				else:
+					# Convert input strings to floats
+					try:
+						colors_num = [ float(x) for x in colors ]
+					except TypeError:
+						raise
+						
+					for number in colors_num:
+						if number < 0 or number > 1:
+							raise ValueError('RGB values are only allowed between 0 and 1');
+
+					if not(id in self.exos):
+						raise KeyError('Id '+id+' of Exo not found.')
+					else:
+						taskMgr.add(self.exos[id].setColorTask, "setColorTask",extraArgs = [colors_num])
+						
+			# "TOGGLETRANSPARENCY" command
+			elif comm_parts[0] == 'TOGGLETRANSPARENCY':
+				# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
+				id = comm_parts[1]
+				
+				if not(id in self.exos):
+					raise KeyError('Id '+id+' of Exo not found.')
+				else:
+					taskMgr.add(self.exos[id].toggleTransparencyTask, "toggleTransparencyTask")
 		
 			# "EXIT" command
 			elif comm_parts[0] == 'EXIT':
@@ -957,7 +1026,7 @@ class ProgramLogic():
 		exoMaterial = Material()
 		exoMaterial.setShininess(5.0)
 		exoMaterial.setAmbient((0.6,0.6,0.6,1))
-		exoMaterial.setDiffuse((0.5,0.5,0.5,1))
+		exoMaterial.setDiffuse((0.25,0.25,0.25,.25))
 		
 		armMaterial = Material()
 		armMaterial.setShininess(12.0)
@@ -991,7 +1060,7 @@ class ProgramLogic():
 		exoMaterial = Material()
 		exoMaterial.setShininess(5.0)
 		exoMaterial.setAmbient((0.6,0.6,0.6,1))
-		exoMaterial.setDiffuse((0.5,0.5,0.5,1))
+		exoMaterial.setDiffuse((0.25,0.25,0.25,.25))
 		
 		armMaterial = Material()
 		armMaterial.setShininess(12.0)
