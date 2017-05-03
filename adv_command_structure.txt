@@ -8,7 +8,7 @@ ADDEXO EXOTYPE HANDEDNESS PARAMETERS
 
 Parameters:
 Exotype - String that specifies the type of the exo to be added
-Handedness - String (either "lefthanded" or "righthanded") that specifies the type of arm that should be added
+Handedness - String (either "left" or "right") that specifies the type of arm that should be added
 Parameters - Parameters needed by that exo type
 
 DELETE - Delete exo
@@ -31,11 +31,15 @@ Command structure:
 TOGGLEMAT HANDEDNESS
 
 Parameters:
-Handedness - String (either "lefthanded" or "righthanded") that specifies the type of the mat to be added.
+Handedness - String (either "left" or "right") that specifies the type of the mat to be added.
 
 ADDBASE - Add an exo that only consists of the base and the armrest without the fingers.
 Command structure
-ADDBASE
+ADDBASE EXOTYPE PARAMETERS
+
+Parameters:
+Exotype - String that specifies the type of the exo to be added
+Parameters - Parameters needed by that exo type
 
 SETCOLOR - Set the color of an exo
 Command structure:
@@ -82,7 +86,7 @@ Focus the window that shows the 3D visualisation (e.g. move the mouse to the win
 
 EXOREALTIME - Add new exo that listens to data coming from a tcp connection
 Parameters:
-TCP_IP = (Default: 127.0.0.1)
-TCP_PORT = (Default: 9901)
+- none -
 
 Explanation:
+This exo is controlled via tcp using the DATA command.

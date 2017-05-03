@@ -112,7 +112,7 @@ class ExoDataControllerKeyboard():
 	
 	def __init__(self,id,handedness):
 		self.id = id
-		if handedness == 'righthanded':
+		if handedness == 'right':
 			self.handedness_switch = 1
 		else:
 			self.handedness_switch = -1
@@ -673,8 +673,8 @@ class ProgramLogic():
 							# Check handedness
 							handedness = comm_parts[2]
 							print(handedness)
-							if not(handedness == 'RIGHTHANDED' or handedness == 'LEFTHANDED'):
-								raise ValueError('Handedness '+handedness+' not recognised. Please use either "lefthanded" or "righthanded".')
+							if not(handedness == 'RIGHT' or handedness == 'LEFT'):
+								raise ValueError('Handedness '+handedness+' not recognised. Please use either "left" or "right".')
 
 							# Convert input strings to floats
 							try:
@@ -695,8 +695,8 @@ class ProgramLogic():
 					else:
 						# Check handedness
 						handedness = comm_parts[2]
-						if not(handedness == 'RIGHTHANDED' or handedness == 'LEFTHANDED'):
-							raise ValueError('Handedness '+handedness+' not recognised. Please use either "lefthanded" or "righthanded".')
+						if not(handedness == 'RIGHT' or handedness == 'LEFT'):
+							raise ValueError('Handedness '+handedness+' not recognised. Please use either "left" or "right".')
 							
 						print('MESSAGE: Adding exo of type ' + exotype + '(' + handedness + ').')
 
@@ -995,7 +995,7 @@ class ProgramLogic():
 		data['exo'] = loader.loadModel('models/exo3_base')
 		data['arm_rest'] = loader.loadModel('models/exo3_arm_rest')
 		
-		if handedness == 'righthanded':
+		if handedness == 'right':
 			data['fthumb'] = loader.loadModel('models/exo3_fthumb_right')
 			data['fgroup'] = loader.loadModel('models/exo3_fgroup_right')
 			data['findex'] = loader.loadModel('models/exo3_findex_right')

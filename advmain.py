@@ -28,9 +28,9 @@ class MyApp(ShowBase):
 		self.build_scene()
 		
 		# Set accepted keys for keyboard control of the program logic
-		self.accept('f10',self.addExoTask,[pl,'lefthanded'])
+		self.accept('f10',self.addExoTask,[pl,'left'])
 		self.accept('f9',self.addBaseTask,[pl])
-		self.accept('f11',self.addExoTask,[pl,'righthanded'])
+		self.accept('f11',self.addExoTask,[pl,'right'])
 		self.accept('f12',self.removeExoTask,[pl])
 		self.accept('escape', self.exit_feedback, [pl])
 		
