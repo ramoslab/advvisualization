@@ -65,13 +65,10 @@ class MyApp(ShowBase):
 		self.camera.setPos(5,-13,10)
 		self.camera.setHpr(0,-30,0)
 		
-		# Floor mat
-		self.mat = loader.loadModel('models/mat_left')
-		
 		# Reparent objects
 		self.render.setLight(alnp)
 		self.render.setLight(plnp)
-		self.mat.reparentTo(self.render)
+		# self.mat.reparentTo(self.render)
 		
 	def exit_feedback(self,pl):
 		taskMgr.add(pl.tskTerminateConnections, "tcp_disconnect")

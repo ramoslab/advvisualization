@@ -56,11 +56,18 @@ TOGGLETRANSPARENCY EXOID
 Parameters:
 Exoid - The unique id of the exo
 
+TOGGLEMAT - Add or change the orientation of the mat (for experiment with left or right hand)
+Command structure:
+TOGGLEMAT SIDE
+
+Parameters:
+Side - Specifies which hand is being trained ('LEFT' or 'RIGHT')
+
 SETBGCOLOR - Set the color of the background
 Command structure:
 SETBGCOLOR COLOR
 
-Paramters:
+Parameters:
 Color - An RGB color in the format red,green,blue (values from 0 to 1)
 
 EXIT - End visualisation (close Panda3D)

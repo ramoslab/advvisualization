@@ -104,6 +104,13 @@ class BaseLogic(Logic):
 		self.exo.setH(data['heading'])
 		
 		return Task.cont
+		
+class MatLogic():
+	''' Logic for the mat '''
+	
+	def __init__(self,model,initial_side):
+		self.mat = model
+		self.side = initial_side
 
 # ### Data controllers ### #		
 
@@ -584,6 +591,8 @@ class ProgramLogic():
 		self.exos = {}
 		# This list contains all the ids of the exos in the order they were added to the program
 		self.exo_ids_in_order = []
+		# This is the mat of the scene
+		self.mat = []
 		# This is referring to the root of the rendering tree
 		self.rootNode = render
 		
@@ -728,7 +737,7 @@ class ProgramLogic():
 					print("MESSAGE: ID " + id + " not found.")
 				
 			# "ADDBASE" command
-			if comm_parts[0] == 'ADDBASE':
+			elif comm_parts[0] == 'ADDBASE':
 				exotype = comm_parts[1]
 				# Check which type of exo should be added
 				if exotype == 'EXOSTATIC':
@@ -832,14 +841,21 @@ class ProgramLogic():
 					raise KeyError('Id '+id+' of Exo not found.')
 				else:
 					taskMgr.add(self.exos[id].toggleTransparencyTask, "toggleTransparencyTask")
+					
+			# "TOGGLEMAT" command
+			elif comm_parts[0] == 'TOGGLEMAT':
+				side = comm_parts[1]
+				
+				if side in ('LEFT','RIGHT'):
+					taskMgr.add(self.toggleMatTask,"toggleMatTask",extraArgs = [side])
+				else:
+					raise ValueError('Value for type of the mat not understood. Please use "LEFT" or "RIGHT".')
 		
 			# "EXIT" command
 			elif comm_parts[0] == 'EXIT':
 				taskMgr.add(self.tskTerminateConnections, "tcp_disconnect")
 				print('Good bye!')
 				sys.exit()
-			
-			#TODO "MAT" command
 			
 			# Invalid command
 			else:
@@ -993,6 +1009,24 @@ class ProgramLogic():
 		print("MESSAGE: # Exos in scene: "+ str(len(self.exos)) +"; Last id: "+self.exo_ids_in_order[-1])
 		return Task.done
 		
+	def toggleMatTask(self,side):
+		''' Function that adds a task that adds or toggles a new mat to the taskmanager. '''
+		
+		# Load, modify and reparent models
+		modeldata = self.create_mat_model(side)
+			
+		# Create logic objects
+		mat = MatLogic(modeldata['mat'],side)
+			
+		# Remove existing mat from the rendering tree if necessary
+		if self.mat:
+			self.mat.mat.detachNode()
+			
+		# Add Mat to the program logic
+		self.mat = mat
+		self.mat.mat.reparentTo(self.rootNode)
+		
+		return Task.done
 		
 	def removeExoTask(self,id):
 		''' Removes specific exo from program logic (and secene). '''
@@ -1112,5 +1146,17 @@ class ProgramLogic():
 		
 		# Reparent objects		
 		data['arm_rest'].reparentTo(data['exo'])
+		
+		return data
+		
+	def create_mat_model(self,side):
+		''' Function that loads an exo model without arm. '''
+		# Load models
+		data = {}
+		
+		if side.lower() == 'left':
+			data['mat'] = loader.loadModel('models/mat_left')
+		elif side.lower() == 'right':
+			data['mat'] = loader.loadModel('models/mat_right')
 		
 		return data
