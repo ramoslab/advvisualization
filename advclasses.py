@@ -690,21 +690,6 @@ class ProgramLogic():
 							taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
 							
 				elif exotype == 'EXOREALTIME':
-					if len(comm_parts) < 3:
-						raise TypeError('Not enough command parameters supplied.')
-					else:
-						# Check handedness
-						handedness = comm_parts[2]
-						if not(handedness == 'RIGHT' or handedness == 'LEFT'):
-							raise ValueError('Handedness '+handedness+' not recognised. Please use either "left" or "right".')
-							
-						print('MESSAGE: Adding exo of type ' + exotype + '(' + handedness + ').')
-
-						taskMgr.add(self.addExoTask, "addExoTask",extraArgs = [("realtime",handedness.lower()),""])
-						# Send ID of the last added exo back to the client
-						taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
-						
-						
 					if len(comm_parts) < 4:
 						raise TypeError('Not enough command parameters supplied.')
 					else:
@@ -934,8 +919,7 @@ class ProgramLogic():
 			# Create logic objects
 			dc = ExoDataControllerRealTime(rand_id)
 			# Set initial data
-			exo_initial_state = (0,0,0,0,0,-10,10)
-			dc.set_data(exo_initial_state)
+			dc.set_data(data)
 			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
