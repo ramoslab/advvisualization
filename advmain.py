@@ -25,8 +25,7 @@ class MyApp(ShowBase):
 		# Initialise scene
 		self.build_scene()
 		
-		#base.setBackgroundColor(0,0,0)
-		#FIXME Continue here
+		base.setBackgroundColor(0,0,0)
 		
 		# Set accepted keys for keyboard control of the program logic
 		self.accept('f10',self.addExoTask,[pl,'left'])
@@ -34,7 +33,6 @@ class MyApp(ShowBase):
 		self.accept('f11',self.addExoTask,[pl,'right'])
 		self.accept('f12',self.removeExoTask,[pl])
 		self.accept('escape', self.exit_feedback, [pl])
-		self.accept('f8',self.changeColor,[pl,(0,0,0)])
 		
 		taskMgr.add(pl.tskListenerPolling, "tcp_establish")
 		taskMgr.add(pl.tskReaderPolling, "tcp_poll")
@@ -51,11 +49,7 @@ class MyApp(ShowBase):
 	def addBaseTask(self,pl):
 		### Temporary function for testing ###
 		taskMgr.add(pl.addBaseTask,'addBaseTask', extraArgs = ['keyboard',""])
-		
-		
-	def changeColor(self,pl,color):
-		taskMgr.add(pl.changeBgColorTask,'changeBgColorTask', extraArgs = [color])
-		
+					
 	def build_scene(self):
 		# Define the lights
 		alight = AmbientLight('alight1')
@@ -68,11 +62,11 @@ class MyApp(ShowBase):
 		plnp.setPos(0, 0, 10)
 	
 		# Define the camera
-		self.camera.setPos(0,-20,10)
-		self.camera.setHpr(0,-25,0)
+		self.camera.setPos(5,-13,10)
+		self.camera.setHpr(0,-30,0)
 		
 		# Floor mat
-		self.mat = loader.loadModel('models/mat')
+		self.mat = loader.loadModel('models/mat_left')
 		
 		# Reparent objects
 		self.render.setLight(alnp)
