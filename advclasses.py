@@ -704,6 +704,33 @@ class ProgramLogic():
 						# Send ID of the last added exo back to the client
 						taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
 						
+						
+					if len(comm_parts) < 4:
+						raise TypeError('Not enough command parameters supplied.')
+					else:
+						exoparams = comm_parts[3].split(",")
+						if len(exoparams) != 7:
+							raise TypeError('Wrong number of kinematics parameters supplied.')
+						else:
+							# Check handedness
+							handedness = comm_parts[2]
+							print(handedness)
+							if not(handedness == 'RIGHT' or handedness == 'LEFT'):
+								raise ValueError('Handedness '+handedness+' not recognised. Please use either "left" or "right".')
+
+							# Convert input strings to floats
+							try:
+								exoparams_num = [ float(x) for x in exoparams ]
+							except TypeError:
+								raise
+							
+							print('MESSAGE: Adding exo of type ' + exotype + '(' + handedness + ').')
+							
+							# Add exo
+							taskMgr.add(self.addExoTask, "addExoTask",extraArgs = [("realtime",handedness.lower()),exoparams_num])
+							# Send ID of the last added exo back to the client
+							taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+							
 			# "DELETE" command
 			elif comm_parts[0] == 'DELETE':
 				# Get the id of the exo
@@ -791,7 +818,26 @@ class ProgramLogic():
 						raise KeyError('Id '+id+' of Exo not found.')
 					else:
 						taskMgr.add(self.exos[id].setColorTask, "setColorTask",extraArgs = [colors_num])
-						
+			
+			# "SETBGCOLOR"
+			elif comm_parts[0] == 'SETBGCOLOR':
+				# Get the colors
+				colors = comm_parts[1].split(",")
+				if len(colors) != 3:
+					raise TypeError('Not enough color parameters supplied.')
+				else:
+					# Convert input strings to floats
+					try:
+						colors_num = [ float (x) for x in colors ]
+					except TypeError:
+						raise
+					
+					for number in colors_num:
+						if number < 0 or number > 1:
+							raise ValueError('RGB values are only allowed between 0 and 1');
+					
+					taskMgr.add(self.changeBgColorTask,"setBgColorTask",extraArgs = [colors_num])
+			
 			# "TOGGLETRANSPARENCY" command
 			elif comm_parts[0] == 'TOGGLETRANSPARENCY':
 				# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
@@ -987,6 +1033,13 @@ class ProgramLogic():
 	
 	###TODO: ADD Mat left/right
 	###TODO: REMOVE Mat
+	
+	def changeBgColorTask(self,color):
+		''' Changes the background color according to color.'''
+		
+		base.setBackgroundColor(color[0],color[1],color[2]);
+		
+		return Task.done
 	
 	def create_exo_model(self,handedness):
 		''' Function that loads an exo model with left or right hand arm. '''

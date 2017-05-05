@@ -56,6 +56,13 @@ TOGGLETRANSPARENCY EXOID
 Parameters:
 Exoid - The unique id of the exo
 
+SETBGCOLOR - Set the color of the background
+Command structure:
+SETBGCOLOR COLOR
+
+Paramters:
+Color - An RGB color in the format red,green,blue (values from 0 to 1)
+
 EXIT - End visualisation (close Panda3D)
 Command structure:
 EXIT

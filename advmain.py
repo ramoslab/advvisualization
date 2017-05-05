@@ -11,8 +11,6 @@ from direct.interval.IntervalGlobal import Sequence
 from direct.actor.Actor import Actor
 from panda3d.core import *
 
-
-
 class MyApp(ShowBase):
 
 	def __init__(self):
@@ -27,12 +25,16 @@ class MyApp(ShowBase):
 		# Initialise scene
 		self.build_scene()
 		
+		#base.setBackgroundColor(0,0,0)
+		#FIXME Continue here
+		
 		# Set accepted keys for keyboard control of the program logic
 		self.accept('f10',self.addExoTask,[pl,'left'])
 		self.accept('f9',self.addBaseTask,[pl])
 		self.accept('f11',self.addExoTask,[pl,'right'])
 		self.accept('f12',self.removeExoTask,[pl])
 		self.accept('escape', self.exit_feedback, [pl])
+		self.accept('f8',self.changeColor,[pl,(0,0,0)])
 		
 		taskMgr.add(pl.tskListenerPolling, "tcp_establish")
 		taskMgr.add(pl.tskReaderPolling, "tcp_poll")
@@ -50,6 +52,9 @@ class MyApp(ShowBase):
 		### Temporary function for testing ###
 		taskMgr.add(pl.addBaseTask,'addBaseTask', extraArgs = ['keyboard',""])
 		
+		
+	def changeColor(self,pl,color):
+		taskMgr.add(pl.changeBgColorTask,'changeBgColorTask', extraArgs = [color])
 		
 	def build_scene(self):
 		# Define the lights
