@@ -28,6 +28,8 @@ class MyApp(ShowBase):
 		base.setBackgroundColor(0,0,0)
 		
 		# Set accepted keys for keyboard control of the program logic
+		self.accept('f8',self.toggleMatTask,[pl])
+		
 		self.accept('f10',self.addExoTask,[pl,'left'])
 		self.accept('f9',self.addBaseTask,[pl])
 		self.accept('f11',self.addExoTask,[pl,'right'])
@@ -39,7 +41,6 @@ class MyApp(ShowBase):
 		
 	def addExoTask(self,pl,handedness):
 		### Temporary function for testing ###
-		
 		taskMgr.add(pl.addExoTask,'addExoTask', extraArgs = [('keyboard',handedness),""])
 		
 	def removeExoTask(self,pl):
@@ -49,6 +50,11 @@ class MyApp(ShowBase):
 	def addBaseTask(self,pl):
 		### Temporary function for testing ###
 		taskMgr.add(pl.addBaseTask,'addBaseTask', extraArgs = ['keyboard',""])
+		
+	def toggleMatTask(self,pl):
+		### Temporary function for testing ###
+		print('Test')
+		taskMgr.add(pl.toggleMatTask,'toggleMatTask', extraArgs = ['LEFT'])
 					
 	def build_scene(self):
 		# Define the lights
@@ -63,7 +69,9 @@ class MyApp(ShowBase):
 	
 		# Define the camera
 		self.camera.setPos(5,-13,10)
+		#self.camera.setPos(10.9,-6.6,10)
 		self.camera.setHpr(0,-30,0)
+		#self.camera.setHpr(0,0,0)
 		
 		# Reparent objects
 		self.render.setLight(alnp)

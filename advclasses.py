@@ -818,7 +818,7 @@ class ProgramLogic():
 				# Get the colors
 				colors = comm_parts[1].split(",")
 				if len(colors) != 3:
-					raise TypeError('Not enough color parameters supplied.')
+					raise TypeError('Wrong number of parameters supplied.')
 				else:
 					# Convert input strings to floats
 					try:
@@ -831,6 +831,21 @@ class ProgramLogic():
 							raise ValueError('RGB values are only allowed between 0 and 1');
 					
 					taskMgr.add(self.changeBgColorTask,"setBgColorTask",extraArgs = [colors_num])
+					
+			# "SETCAMERA"
+			elif comm_parts[0] == 'SETCAMERA':
+				# Get the colors
+				coord_vector = comm_parts[1].split(",")
+				if len(coord_vector) != 6:
+					raise TypeError('Wrong number of parameters supplied.')
+				else:
+					# Convert input strings to floats
+					try:
+						coord_vector_num = [ float (x) for x in coord_vector ]
+					except TypeError:
+						raise
+					
+					taskMgr.add(self.setCameraOrientationPositionTask,"setCameraOrientationPositionTask",extraArgs = [coord_vector_num])
 			
 			# "TOGGLETRANSPARENCY" command
 			elif comm_parts[0] == 'TOGGLETRANSPARENCY':
@@ -1049,7 +1064,6 @@ class ProgramLogic():
 			
 		return Task.done
 	
-	###TODO: ADD Mat left/right
 	###TODO: REMOVE Mat
 	
 	def changeBgColorTask(self,color):
@@ -1058,6 +1072,14 @@ class ProgramLogic():
 		base.setBackgroundColor(color[0],color[1],color[2]);
 		
 		return Task.done
+		
+	def setCameraOrientationPositionTask(self,coordvec):
+		''' Set position and orientation of the camera. '''
+		
+		base.camera.setPos(coordvec[0],coordvec[1],coordvec[2])
+		base.camera.setHpr(coordvec[3],coordvec[4],coordvec[5])
+		
+		return  Task.done
 	
 	def create_exo_model(self,handedness):
 		''' Function that loads an exo model with left or right hand arm. '''
