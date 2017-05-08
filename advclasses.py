@@ -9,6 +9,7 @@ from direct.task import Task
 import random
 import string
 import sys
+#import numpy
 
 # ### Begin ### #
 
@@ -111,6 +112,32 @@ class MatLogic():
 	def __init__(self,model,initial_side):
 		self.mat = model
 		self.side = initial_side
+		
+class CameraLogic():
+	''' Logic for the camera. '''
+	
+	def __init__(self,pl):
+		self.pl = pl
+	
+	def rotate(self,angle):
+		''' Rotate the camera by ANGLE degress while facing the center of the mat. '''
+	
+		angle_rad = (angle * pi)/180
+	
+		R = [[cos(angle_rad),-sin(angle_rad)],[sin(angle_rad),cos(angle_rad)]]
+	
+		dp = self.pl.dotProduct(R,[0,-13-4.65])
+		
+		dp[0] += 4.4
+		dp[1] += 4.65
+		dp.append(10)
+		dp.append(angle)
+		dp.append(-30)
+		dp.append(0)
+		
+		print(dp[0],dp[1])
+		
+		taskMgr.add(self.pl.setCameraOrientationPositionTask,"setCameraOrientationPositionTask",extraArgs = [dp])
 
 # ### Data controllers ### #		
 
@@ -834,7 +861,7 @@ class ProgramLogic():
 					
 			# "SETCAMERA"
 			elif comm_parts[0] == 'SETCAMERA':
-				# Get the colors
+				# Get the coordinates
 				coord_vector = comm_parts[1].split(",")
 				if len(coord_vector) != 6:
 					raise TypeError('Wrong number of parameters supplied.')
@@ -846,6 +873,18 @@ class ProgramLogic():
 						raise
 					
 					taskMgr.add(self.setCameraOrientationPositionTask,"setCameraOrientationPositionTask",extraArgs = [coord_vector_num])
+					
+			elif comm_parts[0] == 'ROTATECAMERA':
+				# Get the angle
+				angle = comm_parts[1]
+				print(angle)
+				# Convert input strings to floats
+				try:
+					angle_num = float(angle)
+				except TypeError:
+					raise
+						
+				taskMgr.add(self.rotateCameraTask,"rotateCameraTask",extraArgs = [angle_num])
 			
 			# "TOGGLETRANSPARENCY" command
 			elif comm_parts[0] == 'TOGGLETRANSPARENCY':
@@ -1080,6 +1119,14 @@ class ProgramLogic():
 		base.camera.setHpr(coordvec[3],coordvec[4],coordvec[5])
 		
 		return  Task.done
+		
+	def rotateCameraTask(self,angle):
+		''' Rotate camera while facing the center of the mat. '''
+		
+		camLogic = CameraLogic(self)
+		camLogic.rotate(angle)
+	
+		return Task.done
 	
 	def create_exo_model(self,handedness):
 		''' Function that loads an exo model with left or right hand arm. '''
@@ -1182,3 +1229,13 @@ class ProgramLogic():
 			data['mat'] = loader.loadModel('models/mat_right')
 		
 		return data
+		
+	def dotProduct(self,matrix,vector):
+		''' Computes the dot product of a matrix and a vector. 
+		The matrix is in the format a[d1][d2].'''
+		dotProd = []
+		for j in range(len(matrix)):
+			dotProd.append(sum( [matrix[j][i]*vector[i] for i in range(len(vector))] ))
+		
+		print(dotProd)
+		return dotProd

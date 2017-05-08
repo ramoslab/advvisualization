@@ -69,9 +69,7 @@ class MyApp(ShowBase):
 	
 		# Define the camera
 		self.camera.setPos(5,-13,10)
-		#self.camera.setPos(10.9,-6.6,10)
 		self.camera.setHpr(0,-30,0)
-		#self.camera.setHpr(0,0,0)
 		
 		# Reparent objects
 		self.render.setLight(alnp)
