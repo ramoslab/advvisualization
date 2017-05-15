@@ -135,8 +135,6 @@ class CameraLogic():
 		dp.append(-30)
 		dp.append(0)
 		
-		print(dp[0],dp[1])
-		
 		taskMgr.add(self.pl.setCameraOrientationPositionTask,"setCameraOrientationPositionTask",extraArgs = [dp])
 
 # ### Data controllers ### #		

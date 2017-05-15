@@ -70,6 +70,13 @@ SETBGCOLOR COLOR
 Parameters:
 Color - An RGB color in the format red,green,blue (values from 0 to 1)
 
+ROTATECAMERA - Rotate the camera by some degrees around the center of the mat
+Command structure:
+ROTATECAMERA ANGLE
+
+Parameters:
+Angle - An angle in degrees
+
 EXIT - End visualisation (close Panda3D)
 Command structure:
 EXIT
