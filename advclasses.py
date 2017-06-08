@@ -679,248 +679,257 @@ class ProgramLogic():
 		return Task.done
 			
 	def parse_commands(self,datagram):
-		''' Function that parses the commands that are received through TCP. Only writes back to TCP in two cases:
+		''' Function that parses a series of commands that are received through TCP. Only writes back to TCP in two cases:
 		1. If an exo is added the id is written back.
-		2. If an exo has been removed successfully.'''
+		2. If an exo has been removed successfully.
+		
+		The command series is first split into single commands. These commands are then parsed and executed.'''
 		# Extract message from the data
-		command = datagram.getMessage()
+		commands = datagram.getMessage()
 		connection = datagram.getConnection()
-		print("MESSAGE: Command '"+command+"' received.")
-
-		# Process command
-		comm_parts = command.split(" ")
 		
-		# Check which command is being send
-		try:
-			# "ADDEXO" command
-			if comm_parts[0] == 'ADDEXO':
-				exotype = comm_parts[1]
-				# Check which type of exo should be added
-				if exotype == 'EXOSTATIC':
-					if len(comm_parts) < 4:
-						raise TypeError('Not enough command parameters supplied.')
-					else:
-						exoparams = comm_parts[3].split(",")
-						if len(exoparams) != 7:
-							raise TypeError('Wrong number of kinematics parameters supplied.')
-						else:
-							# Check handedness
-							handedness = comm_parts[2]
-							print(handedness)
-							if not(handedness == 'RIGHT' or handedness == 'LEFT'):
-								raise ValueError('Handedness '+handedness+' not recognised. Please use either "left" or "right".')
+		commands_split = commands.split("::")
+		
+		for command in commands_split:
+		
+			if command != '':
+		
+				print("MESSAGE: Command '"+command+"' received.")
 
-							# Convert input strings to floats
-							try:
-								exoparams_num = [ float(x) for x in exoparams ]
-							except TypeError:
-								raise
-							
-							print('MESSAGE: Adding exo of type ' + exotype + '(' + handedness + ').')
-							
-							# Add exo
-							taskMgr.add(self.addExoTask, "addExoTask",extraArgs = [("static",handedness.lower()),exoparams_num])
-							# Send ID of the last added exo back to the client
-							taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
-							
-				elif exotype == 'EXOREALTIME':
-					if len(comm_parts) < 4:
-						raise TypeError('Not enough command parameters supplied.')
-					else:
-						exoparams = comm_parts[3].split(",")
-						if len(exoparams) != 7:
-							raise TypeError('Wrong number of kinematics parameters supplied.')
-						else:
-							# Check handedness
-							handedness = comm_parts[2]
-							print(handedness)
-							if not(handedness == 'RIGHT' or handedness == 'LEFT'):
-								raise ValueError('Handedness '+handedness+' not recognised. Please use either "left" or "right".')
-
-							# Convert input strings to floats
-							try:
-								exoparams_num = [ float(x) for x in exoparams ]
-							except TypeError:
-								raise
-							
-							print('MESSAGE: Adding exo of type ' + exotype + '(' + handedness + ').')
-							
-							# Add exo
-							taskMgr.add(self.addExoTask, "addExoTask",extraArgs = [("realtime",handedness.lower()),exoparams_num])
-							# Send ID of the last added exo back to the client
-							taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
-							
-			# "DELETE" command
-			elif comm_parts[0] == 'DELETE':
-				# Get the id of the exo
-				id = comm_parts[1]
-				if id in self.exos:
-					print('MESSAGE: Deleting exo: '+id)
-					taskMgr.add(self.removeExoTask, "removeExoTask", extraArgs = [id])
-					taskMgr.doMethodLater(0.5,self.send_message,'Send_delete_confirmation',extraArgs = ['DELETED:'+id,connection])
-				else:
-					print("MESSAGE: ID " + id + " not found.")
+				# Process command
+				comm_parts = command.split(" ")
 				
-			# "ADDBASE" command
-			elif comm_parts[0] == 'ADDBASE':
-				exotype = comm_parts[1]
-				# Check which type of exo should be added
-				if exotype == 'EXOSTATIC':
-					if len(comm_parts) < 3:
-						raise TypeError('Not enough command parameters supplied.')
-					else:
-						exoparams = comm_parts[2].split(",")
-						if len(exoparams) != 3:
-							raise TypeError('Wrong number of kinematics parameters supplied.')
-						else:
-							# Convert input strings to floats
-							try:
-								exoparams_num = [ float(x) for x in exoparams ]
-							except TypeError:
-								raise
-							
-							print('MESSAGE: Adding exo (base only) of type ' + exotype +'.')
-							
-							# Add exo
-							taskMgr.add(self.addBaseTask, "addBaseTask",extraArgs = ["static",exoparams_num])
-							# Send ID of the last added exo back to the client
-							taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
-							
-				elif exotype == 'EXOREALTIME':
-					if len(comm_parts) < 2:
-						raise TypeError('Not enough command parameters supplied.')
-					else:
-						print('MESSAGE: Adding exo (base only) of type ' + exotype + '.')
-
-						taskMgr.add(self.addBaseTask, "addBaseTask",extraArgs = ["realtime",""])
-						# Send ID of the last added exo back to the client
-						taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
-						
-			# "DATA" command
-			elif comm_parts[0] == 'DATA':
-				# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
-				id = comm_parts[1]
-				exoparams = comm_parts[2].split(",")
-				if len(exoparams) != 7:
-					raise TypeError('Not enough kinematics parameters supplied.')
-				else:
-					# Convert input strings to floats
-					try:
-						exoparams_num = [ float(x) for x in exoparams ]
-					except TypeError:
-						raise
-
-					if not(id in self.exos):
-						raise KeyError('Id '+id+' of Exo not found.')
-					else:
-						self.exos[id].dc.set_data(exoparams_num)
-						
-			# "SETCOLOR" command
-			elif comm_parts[0] == 'SETCOLOR':
-				# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
-				id = comm_parts[1]
-				colors = comm_parts[2].split(",")
-				if len(colors) != 3:
-					raise TypeError('Not enough color parameters supplied.')
-				else:
-					# Convert input strings to floats
-					try:
-						colors_num = [ float(x) for x in colors ]
-					except TypeError:
-						raise
-						
-					for number in colors_num:
-						if number < 0 or number > 1:
-							raise ValueError('RGB values are only allowed between 0 and 1');
-
-					if not(id in self.exos):
-						raise KeyError('Id '+id+' of Exo not found.')
-					else:
-						taskMgr.add(self.exos[id].setColorTask, "setColorTask",extraArgs = [colors_num])
-			
-			# "SETBGCOLOR"
-			elif comm_parts[0] == 'SETBGCOLOR':
-				# Get the colors
-				colors = comm_parts[1].split(",")
-				if len(colors) != 3:
-					raise TypeError('Wrong number of parameters supplied.')
-				else:
-					# Convert input strings to floats
-					try:
-						colors_num = [ float (x) for x in colors ]
-					except TypeError:
-						raise
-					
-					for number in colors_num:
-						if number < 0 or number > 1:
-							raise ValueError('RGB values are only allowed between 0 and 1');
-					
-					taskMgr.add(self.changeBgColorTask,"setBgColorTask",extraArgs = [colors_num])
-					
-			# "SETCAMERA"
-			elif comm_parts[0] == 'SETCAMERA':
-				# Get the coordinates
-				coord_vector = comm_parts[1].split(",")
-				if len(coord_vector) != 6:
-					raise TypeError('Wrong number of parameters supplied.')
-				else:
-					# Convert input strings to floats
-					try:
-						coord_vector_num = [ float (x) for x in coord_vector ]
-					except TypeError:
-						raise
-					
-					taskMgr.add(self.setCameraOrientationPositionTask,"setCameraOrientationPositionTask",extraArgs = [coord_vector_num])
-					
-			elif comm_parts[0] == 'ROTATECAMERA':
-				# Get the angle
-				angle = comm_parts[1]
-				print(angle)
-				# Convert input strings to floats
+				# Check which command is being send
 				try:
-					angle_num = float(angle)
-				except TypeError:
-					raise
+					# "ADDEXO" command
+					if comm_parts[0] == 'ADDEXO':
+						exotype = comm_parts[1]
+						# Check which type of exo should be added
+						if exotype == 'EXOSTATIC':
+							if len(comm_parts) < 4:
+								raise TypeError('Not enough command parameters supplied.')
+							else:
+								exoparams = comm_parts[3].split(",")
+								if len(exoparams) != 7:
+									raise TypeError('Wrong number of kinematics parameters supplied.')
+								else:
+									# Check handedness
+									handedness = comm_parts[2]
+									print(handedness)
+									if not(handedness == 'RIGHT' or handedness == 'LEFT'):
+										raise ValueError('Handedness '+handedness+' not recognised. Please use either "left" or "right".')
+
+									# Convert input strings to floats
+									try:
+										exoparams_num = [ float(x) for x in exoparams ]
+									except TypeError:
+										raise
+									
+									print('MESSAGE: Adding exo of type ' + exotype + '(' + handedness + ').')
+									
+									# Add exo
+									taskMgr.add(self.addExoTask, "addExoTask",extraArgs = [("static",handedness.lower()),exoparams_num])
+									# Send ID of the last added exo back to the client
+									taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+									
+						elif exotype == 'EXOREALTIME':
+							if len(comm_parts) < 4:
+								raise TypeError('Not enough command parameters supplied.')
+							else:
+								exoparams = comm_parts[3].split(",")
+								if len(exoparams) != 7:
+									raise TypeError('Wrong number of kinematics parameters supplied.')
+								else:
+									# Check handedness
+									handedness = comm_parts[2]
+									print(handedness)
+									if not(handedness == 'RIGHT' or handedness == 'LEFT'):
+										raise ValueError('Handedness '+handedness+' not recognised. Please use either "left" or "right".')
+
+									# Convert input strings to floats
+									try:
+										exoparams_num = [ float(x) for x in exoparams ]
+									except TypeError:
+										raise
+									
+									print('MESSAGE: Adding exo of type ' + exotype + '(' + handedness + ').')
+									
+									# Add exo
+									taskMgr.add(self.addExoTask, "addExoTask",extraArgs = [("realtime",handedness.lower()),exoparams_num])
+									# Send ID of the last added exo back to the client
+									taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+									
+					# "DELETE" command
+					elif comm_parts[0] == 'DELETE':
+						# Get the id of the exo
+						id = comm_parts[1]
+						if id in self.exos:
+							print('MESSAGE: Deleting exo: '+id)
+							taskMgr.add(self.removeExoTask, "removeExoTask", extraArgs = [id])
+							taskMgr.doMethodLater(0.5,self.send_message,'Send_delete_confirmation',extraArgs = ['DELETED:'+id,connection])
+						else:
+							print("MESSAGE: ID " + id + " not found.")
 						
-				taskMgr.add(self.rotateCameraTask,"rotateCameraTask",extraArgs = [angle_num])
-			
-			# "TOGGLETRANSPARENCY" command
-			elif comm_parts[0] == 'TOGGLETRANSPARENCY':
-				# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
-				id = comm_parts[1]
-				
-				if not(id in self.exos):
-					raise KeyError('Id '+id+' of Exo not found.')
-				else:
-					taskMgr.add(self.exos[id].toggleTransparencyTask, "toggleTransparencyTask")
+					# "ADDBASE" command
+					elif comm_parts[0] == 'ADDBASE':
+						exotype = comm_parts[1]
+						# Check which type of exo should be added
+						if exotype == 'EXOSTATIC':
+							if len(comm_parts) < 3:
+								raise TypeError('Not enough command parameters supplied.')
+							else:
+								exoparams = comm_parts[2].split(",")
+								if len(exoparams) != 3:
+									raise TypeError('Wrong number of kinematics parameters supplied.')
+								else:
+									# Convert input strings to floats
+									try:
+										exoparams_num = [ float(x) for x in exoparams ]
+									except TypeError:
+										raise
+									
+									print('MESSAGE: Adding exo (base only) of type ' + exotype +'.')
+									
+									# Add exo
+									taskMgr.add(self.addBaseTask, "addBaseTask",extraArgs = ["static",exoparams_num])
+									# Send ID of the last added exo back to the client
+									taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+									
+						elif exotype == 'EXOREALTIME':
+							if len(comm_parts) < 2:
+								raise TypeError('Not enough command parameters supplied.')
+							else:
+								print('MESSAGE: Adding exo (base only) of type ' + exotype + '.')
+
+								taskMgr.add(self.addBaseTask, "addBaseTask",extraArgs = ["realtime",""])
+								# Send ID of the last added exo back to the client
+								taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+								
+					# "DATA" command
+					elif comm_parts[0] == 'DATA':
+						# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
+						id = comm_parts[1]
+						exoparams = comm_parts[2].split(",")
+						if len(exoparams) != 7:
+							raise TypeError('Not enough kinematics parameters supplied.')
+						else:
+							# Convert input strings to floats
+							try:
+								exoparams_num = [ float(x) for x in exoparams ]
+							except TypeError:
+								raise
+
+							if not(id in self.exos):
+								raise KeyError('Id '+id+' of Exo not found.')
+							else:
+								self.exos[id].dc.set_data(exoparams_num)
+								
+					# "SETCOLOR" command
+					elif comm_parts[0] == 'SETCOLOR':
+						# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
+						id = comm_parts[1]
+						colors = comm_parts[2].split(",")
+						if len(colors) != 3:
+							raise TypeError('Not enough color parameters supplied.')
+						else:
+							# Convert input strings to floats
+							try:
+								colors_num = [ float(x) for x in colors ]
+							except TypeError:
+								raise
+								
+							for number in colors_num:
+								if number < 0 or number > 1:
+									raise ValueError('RGB values are only allowed between 0 and 1');
+
+							if not(id in self.exos):
+								raise KeyError('Id '+id+' of Exo not found.')
+							else:
+								taskMgr.add(self.exos[id].setColorTask, "setColorTask",extraArgs = [colors_num])
 					
-			# "TOGGLEMAT" command
-			elif comm_parts[0] == 'TOGGLEMAT':
-				side = comm_parts[1]
+					# "SETBGCOLOR"
+					elif comm_parts[0] == 'SETBGCOLOR':
+						# Get the colors
+						colors = comm_parts[1].split(",")
+						if len(colors) != 3:
+							raise TypeError('Wrong number of parameters supplied.')
+						else:
+							# Convert input strings to floats
+							try:
+								colors_num = [ float (x) for x in colors ]
+							except TypeError:
+								raise
+							
+							for number in colors_num:
+								if number < 0 or number > 1:
+									raise ValueError('RGB values are only allowed between 0 and 1');
+							
+							taskMgr.add(self.changeBgColorTask,"setBgColorTask",extraArgs = [colors_num])
+							
+					# "SETCAMERA"
+					elif comm_parts[0] == 'SETCAMERA':
+						# Get the coordinates
+						coord_vector = comm_parts[1].split(",")
+						if len(coord_vector) != 6:
+							raise TypeError('Wrong number of parameters supplied.')
+						else:
+							# Convert input strings to floats
+							try:
+								coord_vector_num = [ float (x) for x in coord_vector ]
+							except TypeError:
+								raise
+							
+							taskMgr.add(self.setCameraOrientationPositionTask,"setCameraOrientationPositionTask",extraArgs = [coord_vector_num])
+							
+					elif comm_parts[0] == 'ROTATECAMERA':
+						# Get the angle
+						angle = comm_parts[1]
+						print(angle)
+						# Convert input strings to floats
+						try:
+							angle_num = float(angle)
+						except TypeError:
+							raise
+								
+						taskMgr.add(self.rotateCameraTask,"rotateCameraTask",extraArgs = [angle_num])
+					
+					# "TOGGLETRANSPARENCY" command
+					elif comm_parts[0] == 'TOGGLETRANSPARENCY':
+						# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
+						id = comm_parts[1]
+						
+						if not(id in self.exos):
+							raise KeyError('Id '+id+' of Exo not found.')
+						else:
+							taskMgr.add(self.exos[id].toggleTransparencyTask, "toggleTransparencyTask")
+							
+					# "TOGGLEMAT" command
+					elif comm_parts[0] == 'TOGGLEMAT':
+						side = comm_parts[1]
+						
+						if side in ('LEFT','RIGHT'):
+							taskMgr.add(self.toggleMatTask,"toggleMatTask",extraArgs = [side])
+						else:
+							raise ValueError('Value for type of the mat not understood. Please use "LEFT" or "RIGHT".')
 				
-				if side in ('LEFT','RIGHT'):
-					taskMgr.add(self.toggleMatTask,"toggleMatTask",extraArgs = [side])
-				else:
-					raise ValueError('Value for type of the mat not understood. Please use "LEFT" or "RIGHT".')
-		
-			# "EXIT" command
-			elif comm_parts[0] == 'EXIT':
-				taskMgr.add(self.tskTerminateConnections, "tcp_disconnect")
-				print('Good bye!')
-				sys.exit()
-			
-			# Invalid command
-			else:
-				raise TypeError('Invalid command '+command+'.')
-		
-		except TypeError as t:
-			print('ERROR: ' + str(t))
-		except ValueError as v:
-			print('ERROR: ' + str(v))
-		except KeyError as k:
-			print('ERROR: ' + str(k))
-		except IndexError:
-			print('ERROR: Not enough command parameters supplied.')
+					# "EXIT" command
+					elif comm_parts[0] == 'EXIT':
+						taskMgr.add(self.tskTerminateConnections, "tcp_disconnect")
+						print('Good bye!')
+						sys.exit()
+					
+					# Invalid command
+					else:
+						raise TypeError('Invalid command '+command+'.')
+				
+				except TypeError as t:
+					print('ERROR: ' + str(t))
+				except ValueError as v:
+					print('ERROR: ' + str(v))
+				except KeyError as k:
+					print('ERROR: ' + str(k))
+				except IndexError:
+					print('ERROR: Not enough command parameters supplied.')
 			
 	def send_latest_id(self,connection):
 		''' This functions responds to the client and sends the ID of the exo that has been added last. '''
