@@ -926,11 +926,6 @@ class ProgramLogic():
 		''' This functions responds to the client and sends the ID of the exo that has been added last. '''
 		self.cWriter.send(":"+self.exo_ids_in_order[-1],connection)
 		return Task.done
-			
-	def send_latest_id(self,connection):
-		''' This functions responds to the client and sends the ID of the exo that has been added last. '''
-		self.cWriter.send(":"+self.exo_ids_in_order[-1],connection)
-		return Task.done
 		
 	def send_message(self,message,connection):
 		''' This function responds to the client and sends a specified message. '''
