@@ -772,7 +772,6 @@ class ProgramLogic():
 						if id in self.exos:
 							print('MESSAGE: Deleting exo: '+id)
 							taskMgr.add(self.removeExoTask, "removeExoTask", extraArgs = [id])
-							taskMgr.doMethodLater(0.5,self.send_message,'Send_delete_confirmation',extraArgs = ['DELETED:'+id,connection])
 						else:
 							print("MESSAGE: ID " + id + " not found.")
 						
@@ -805,14 +804,28 @@ class ProgramLogic():
 									taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
 									
 						elif exotype == 'EXOREALTIME':
-							if len(comm_parts) < 2:
+							if len(comm_parts) < 3:
 								raise TypeError('Not enough command parameters supplied.')
 							else:
-								print('MESSAGE: Adding exo (base only) of type ' + exotype + '.')
-
-								taskMgr.add(self.addBaseTask, "addBaseTask",extraArgs = ["realtime",""])
-								# Send ID of the last added exo back to the client
-								taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+								exoparams = comm_parts[2].split(",")
+								if len(exoparams) != 3:
+									raise TypeError('Wrong number of kinematics parameters supplied.')
+								else:
+									# Convert input strings to floats
+									try:
+										exoparams_num = [ float(x) for x in exoparams ]
+										# Divide x and y paramters by 10
+										exoparams_num[0] /= 10
+										exoparams_num[1] /= 10
+									except TypeError:
+										raise
+									
+									print('MESSAGE: Adding exo (base only) of type ' + exotype + '.')
+									
+									# Add exo
+									taskMgr.add(self.addBaseTask, "addBaseTask",extraArgs = ["realtime",exoparams_num])
+									# Send ID of the last added exo back to the client
+									taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
 								
 					# "DATA" command
 					elif comm_parts[0] == 'DATA':
@@ -1063,9 +1076,7 @@ class ProgramLogic():
 			
 			# Create logic objects
 			dc = BaseDataControllerRealTime(rand_id)
-			# Set initial data
-			exo_initial_state = (0,0,0)
-			dc.set_data(exo_initial_state)
+			dc.set_data(data)
 			exo = BaseLogic(modeldata['exo'],dc)
 			
 			# Add Exo to the program logic
