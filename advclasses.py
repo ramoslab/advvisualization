@@ -722,6 +722,9 @@ class ProgramLogic():
 									# Convert input strings to floats
 									try:
 										exoparams_num = [ float(x) for x in exoparams ]
+										# Divide x and y paramters by 10
+										exoparams_num[0] /= 10
+										exoparams_num[1] /= 10
 									except TypeError:
 										raise
 									
@@ -749,6 +752,9 @@ class ProgramLogic():
 									# Convert input strings to floats
 									try:
 										exoparams_num = [ float(x) for x in exoparams ]
+										# Divide x and y paramters by 10
+										exoparams_num[0] /= 10
+										exoparams_num[1] /= 10
 									except TypeError:
 										raise
 									
@@ -785,6 +791,9 @@ class ProgramLogic():
 									# Convert input strings to floats
 									try:
 										exoparams_num = [ float(x) for x in exoparams ]
+										# Divide x and y paramters by 10
+										exoparams_num[0] /= 10
+										exoparams_num[1] /= 10
 									except TypeError:
 										raise
 									
@@ -816,6 +825,9 @@ class ProgramLogic():
 							# Convert input strings to floats
 							try:
 								exoparams_num = [ float(x) for x in exoparams ]
+								# Divide x and y paramters by 10
+								exoparams_num[0] /= 10
+								exoparams_num[1] /= 10
 							except TypeError:
 								raise
 
