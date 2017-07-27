@@ -67,7 +67,7 @@ class ExoLogic(Logic):
 		self.fthumb = fthumb_model
 			
 	def getDataTask(self,task):
-		''' This is the task the handles the movement of the exo model. '''
+	    ''' This is the task that handles the movement of the exo model. '''
 		
 		# Retrieve the data from the controller
 		exo_state = (self.exo.getX(),self.exo.getY(),self.exo.getH(),self.prono.getR(),self.findex.getH(),self.fgroup.getH(),self.fthumb.getH())
