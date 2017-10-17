@@ -18,8 +18,9 @@ import sys
 class Logic(object):
 	''' Superclass for the logic that controls exos and bases. '''
 	
-	def __init__(self,exo_model,dataController):
+	def __init__(self,exo_model,armrest_model,dataController):
 		self.exo = exo_model
+		self.armrest = armrest_model
 		
 		self.dc = dataController
 		
@@ -28,9 +29,17 @@ class Logic(object):
 	def setColorBaseTask(self,color):
 		''' This task sets to color (lighting) of the base model. '''
 		
-		exoMaterial = self.exo.getMaterial()
-		exoMaterial.setAmbient((color[0],color[1],color[2],1))
-		self.exo.setMaterial(exoMaterial)
+		material = self.exo.getMaterial()
+		material.setAmbient((color[0],color[1],color[2],1))
+		self.exo.setMaterial(material)
+		
+		return Task.done
+		
+	def setColorArmRestTask(self,color):
+		''' This task sets to color (lighting) of the base model. '''
+		material = self.armrest.getMaterial()
+		material.setAmbient((color[0],color[1],color[2],1))
+		self.armrest.setMaterial(material)
 		
 		return Task.done
 	
@@ -57,9 +66,9 @@ class Logic(object):
 class ExoLogic(Logic):
 	''' Logic for the movement of the Exo. Inherits from Logic. '''
 	
-	def __init__(self,exo_model,exo_prono,findex_model,fgroup_model,fthumb_model,dataController):
+	def __init__(self,exo_model,armrest_model,exo_prono,findex_model,fgroup_model,fthumb_model,dataController):
 	
-		super(ExoLogic, self).__init__(exo_model,dataController)
+		super(ExoLogic, self).__init__(exo_model,armrest_model,dataController)
 		
 		self.prono = exo_prono
 		self.findex = findex_model
@@ -85,15 +94,6 @@ class ExoLogic(Logic):
 		self.fthumb.setH(data[4]['heading'])
 		
 		return Task.cont
-		
-	def setColorArmRestTask(self,color):
-		''' This task sets the color (lighting) of the arm rest of the hand. '''
-		
-		material = self.prono.getMaterial()
-		material.setAmbient((color[0],color[1],color[2],1))
-		self.prono.setMaterial(material)
-		
-		return Task.done
 		
 	def setColorPronoTask(self,color):
 		''' This task sets the color (lighting) of the pronation module. '''
@@ -134,8 +134,8 @@ class ExoLogic(Logic):
 class BaseLogic(Logic):
 	''' Logic for the movement of the Base '''
 	
-	def __init__(self,exo_model,dataController):
-		super(BaseLogic, self).__init__(exo_model,dataController)
+	def __init__(self,exo_model,armrest_model,dataController):
+		super(BaseLogic, self).__init__(exo_model,armrest_model,dataController)
 		
 	def getDataTask(self,task):
 		''' This is the task the handles the movement of the exo model. '''
@@ -917,8 +917,8 @@ class ProgramLogic():
 							else:
 								taskMgr.add(self.exos[id].setColorBaseTask, "setColorBaseTask",extraArgs = [colors_num])
 					
-					# "SETCOLOR" command
-					elif comm_parts[0] == 'SETCOLOR':
+					# "SETCOLORHAND" command
+					elif comm_parts[0] == 'SETCOLORHAND':
 						# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
 						id = comm_parts[1]
 						# Get the target part of the exo to be coloured.
@@ -1062,7 +1062,7 @@ class ProgramLogic():
 			
 			# Create logic objects
 			dc = ExoDataControllerKeyboard(rand_id,type[1])
-			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
+			exo = ExoLogic(modeldata['exo'],modeldata['armrest'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
 			self.exos[rand_id] = exo
@@ -1081,7 +1081,7 @@ class ProgramLogic():
 			
 			# Create logic objects
 			dc = ExoDataControllerStatic(rand_id,data[0],data[1],data[2],data[3],data[4],data[5],data[6])
-			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
+			exo = ExoLogic(modeldata['exo'],modeldata['armrest'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
 			self.exos[rand_id] = exo
@@ -1100,7 +1100,7 @@ class ProgramLogic():
 			dc = ExoDataControllerRealTime(rand_id)
 			# Set initial data
 			dc.set_data(data)
-			exo = ExoLogic(modeldata['exo'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
+			exo = ExoLogic(modeldata['exo'],modeldata['armrest'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
 			self.exos[rand_id] = exo
@@ -1123,7 +1123,7 @@ class ProgramLogic():
 			
 			# Create logic objects
 			dc = BaseDataControllerKeyboard(rand_id)
-			exo = BaseLogic(modeldata['exo'],dc)
+			exo = BaseLogic(modeldata['exo'],modeldata['armrest'],dc)
 			
 			# Add Exo to the program logic
 			self.exos[rand_id] = exo
@@ -1142,7 +1142,7 @@ class ProgramLogic():
 			
 			# Create logic objects
 			dc = BaseDataControllerStatic(rand_id,data[0],data[1],data[2])
-			exo = BaseLogic(modeldata['exo'],dc)
+			exo = BaseLogic(modeldata['exo'],modeldata['armrest'],dc)
 			
 			# Add Exo to the program logic
 			self.exos[rand_id] = exo
@@ -1160,7 +1160,7 @@ class ProgramLogic():
 			# Create logic objects
 			dc = BaseDataControllerRealTime(rand_id)
 			dc.set_data(data)
-			exo = BaseLogic(modeldata['exo'],dc)
+			exo = BaseLogic(modeldata['exo'],modeldata['armrest'],dc)
 			
 			# Add Exo to the program logic
 			self.exos[rand_id] = exo
@@ -1211,7 +1211,7 @@ class ProgramLogic():
 			
 		return Task.done
 	
-	###TODO: REMOVE Mat
+	#TODO: REMOVE Mat
 	
 	def changeBgColorTask(self,color):
 		''' Changes the background color according to color.'''
@@ -1241,7 +1241,7 @@ class ProgramLogic():
 		# Load models
 		data = {}
 		data['exo'] = loader.loadModel('models/exo3_base')
-		data['arm_rest'] = loader.loadModel('models/exo3_arm_rest')
+		data['armrest'] = loader.loadModel('models/exo3_arm_rest')
 		
 		if handedness == 'right':
 			data['fthumb'] = loader.loadModel('models/exo3_fthumb_right')
@@ -1283,18 +1283,17 @@ class ProgramLogic():
 			armMaterialList[i].setDiffuse((0.3,0.3,0.3,1))
 		
 		data['exomaterial'] = exoMaterial
-		#data['armmaterial'] = armMaterial
 		
 		data['exo'].setMaterial(exoMaterial)
-		data['arm_rest'].setMaterial(armMaterialList[0])
+		data['armrest'].setMaterial(armMaterialList[0])
 		data['prono'].setMaterial(armMaterialList[1])
 		data['fthumb'].setMaterial(armMaterialList[2])
 		data['fgroup'].setMaterial(armMaterialList[3])
 		data['findex'].setMaterial(armMaterialList[4])
 		
 		# Reparent objects		
-		data['arm_rest'].reparentTo(data['exo'])
-		data['prono'].reparentTo(data['arm_rest'])
+		data['armrest'].reparentTo(data['exo'])
+		data['prono'].reparentTo(data['armrest'])
 		data['fthumb'].reparentTo(data['prono'])
 		data['fgroup'].reparentTo(data['prono'])
 		data['findex'].reparentTo(data['prono'])
@@ -1306,7 +1305,7 @@ class ProgramLogic():
 		# Load models
 		data = {}
 		data['exo'] = loader.loadModel('models/exo3_base')
-		data['arm_rest'] = loader.loadModel('models/exo3_arm_rest')
+		data['armrest'] = loader.loadModel('models/exo3_arm_rest')
 		
 		# Define and set materials
 		exoMaterial = Material()
@@ -1320,13 +1319,12 @@ class ProgramLogic():
 		armMaterial.setDiffuse((0.3,0.3,0.3,1))
 		
 		data['exomaterial'] = exoMaterial
-		data['armmaterial'] = armMaterial
 		
 		data['exo'].setMaterial(exoMaterial)
-		data['arm_rest'].setMaterial(armMaterial)
+		data['armrest'].setMaterial(armMaterial)
 		
 		# Reparent objects		
-		data['arm_rest'].reparentTo(data['exo'])
+		data['armrest'].reparentTo(data['exo'])
 		
 		return data
 		
