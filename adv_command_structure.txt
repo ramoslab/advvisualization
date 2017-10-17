@@ -47,12 +47,22 @@ Parameters:
 Exotype - String that specifies the type of the exo to be added
 Parameters - Parameters needed by that exo type
 
-SETCOLOR - Set the color of an exo
+SETCOLORBASE - Set the color of an exo
 Command structure:
-SETCOLOR EXOID COLOR
+SETCOLORBASE EXOID TARGET COLOR
 
 Parameters:
 Exoid - The unique id of the exo
+Target - The part of the base to be colored. One of "BASE" or "ARMREST"
+Color - An RGB color in the format red,green,blue (values from 0 to 1)
+
+SETCOLORHAND - Set the color of an exo
+Command structure:
+SETCOLORHAND EXOID TARGET COLOR
+
+Parameters:
+Exoid - The unique id of the exo
+Target - The part of the hand to be colored. One of "SUPPRO" (Pronation/supination arc), "THUMB", "FINGERGROUP", or "INDEX".
 Color - An RGB color in the format red,green,blue (values from 0 to 1)
 
 TOGGLETRANSPARENCY - Toggle transparency of an exo
