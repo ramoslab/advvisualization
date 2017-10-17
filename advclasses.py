@@ -25,8 +25,8 @@ class Logic(object):
 		
 		self.modelTransparencySet = False
 		
-	def setColorTask(self,color):
-		''' This task sets to color (lighting) of the exo model. '''
+	def setColorBaseTask(self,color):
+		''' This task sets to color (lighting) of the base model. '''
 		
 		exoMaterial = self.exo.getMaterial()
 		exoMaterial.setAmbient((color[0],color[1],color[2],1))
@@ -67,7 +67,7 @@ class ExoLogic(Logic):
 		self.fthumb = fthumb_model
 			
 	def getDataTask(self,task):
-	    ''' This is the task that handles the movement of the exo model. '''
+		''' This is the task that handles the movement of the exo model. '''
 		
 		# Retrieve the data from the controller
 		exo_state = (self.exo.getX(),self.exo.getY(),self.exo.getH(),self.prono.getR(),self.findex.getH(),self.fgroup.getH(),self.fthumb.getH())
@@ -85,6 +85,51 @@ class ExoLogic(Logic):
 		self.fthumb.setH(data[4]['heading'])
 		
 		return Task.cont
+		
+	def setColorArmRestTask(self,color):
+		''' This task sets the color (lighting) of the arm rest of the hand. '''
+		
+		material = self.prono.getMaterial()
+		material.setAmbient((color[0],color[1],color[2],1))
+		self.prono.setMaterial(material)
+		
+		return Task.done
+		
+	def setColorPronoTask(self,color):
+		''' This task sets the color (lighting) of the pronation module. '''
+		
+		material = self.prono.getMaterial()
+		material.setAmbient((color[0],color[1],color[2],1))
+		self.prono.setMaterial(material)
+		
+		return Task.done
+	
+	def setColorThumbTask(self,color):
+		''' This task sets the color (lighting) of the thumb. '''
+		
+		material = self.fthumb.getMaterial()
+		material.setAmbient((color[0],color[1],color[2],1))
+		self.fthumb.setMaterial(material)
+		
+		return Task.done
+		
+	def setColorFingerGroupTask(self,color):
+		''' This task sets the color (lighting) of the finger group. '''
+		
+		material = self.fgroup.getMaterial()
+		material.setAmbient((color[0],color[1],color[2],1))
+		self.fgroup.setMaterial(material)
+		
+		return Task.done
+		
+	def setColorIndexTask(self,color):
+		''' This task sets the color (lighting) of the index finger. '''
+		
+		material = self.findex.getMaterial()
+		material.setAmbient((color[0],color[1],color[2],1))
+		self.findex.setMaterial(material)
+		
+		return Task.done
 	
 class BaseLogic(Logic):
 	''' Logic for the movement of the Base '''
@@ -849,8 +894,8 @@ class ProgramLogic():
 							else:
 								self.exos[id].dc.set_data(exoparams_num)
 								
-					# "SETCOLOR" command
-					elif comm_parts[0] == 'SETCOLOR':
+					# "SETCOLORBASE" command
+					elif comm_parts[0] == 'SETCOLORBASE':
 						# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
 						id = comm_parts[1]
 						colors = comm_parts[2].split(",")
@@ -870,9 +915,32 @@ class ProgramLogic():
 							if not(id in self.exos):
 								raise KeyError('Id '+id+' of Exo not found.')
 							else:
-								taskMgr.add(self.exos[id].setColorTask, "setColorTask",extraArgs = [colors_num])
+								taskMgr.add(self.exos[id].setColorBaseTask, "setColorBaseTask",extraArgs = [colors_num])
 					
-					# "SETBGCOLOR"
+					# "SETCOLORHAND" command
+					elif comm_parts[0] == 'SETCOLORHAND':
+						# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
+						id = comm_parts[1]
+						colors = comm_parts[2].split(",")
+						if len(colors) != 3:
+							raise TypeError('Not enough color parameters supplied.')
+						else:
+							# Convert input strings to floats
+							try:
+								colors_num = [ float(x) for x in colors ]
+							except TypeError:
+								raise
+								
+							for number in colors_num:
+								if number < 0 or number > 1:
+									raise ValueError('RGB values are only allowed between 0 and 1');
+
+							if not(id in self.exos):
+								raise KeyError('Id '+id+' of Exo not found.')
+							else:
+								taskMgr.add(self.exos[id].setColorHandTask, "setColorHandTask",extraArgs = [colors_num])
+					
+					# "SETBGCOLOR" command
 					elif comm_parts[0] == 'SETBGCOLOR':
 						# Get the colors
 						colors = comm_parts[1].split(",")
@@ -891,7 +959,7 @@ class ProgramLogic():
 							
 							taskMgr.add(self.changeBgColorTask,"setBgColorTask",extraArgs = [colors_num])
 							
-					# "SETCAMERA"
+					# "SETCAMERA" command
 					elif comm_parts[0] == 'SETCAMERA':
 						# Get the coordinates
 						coord_vector = comm_parts[1].split(",")
@@ -906,6 +974,7 @@ class ProgramLogic():
 							
 							taskMgr.add(self.setCameraOrientationPositionTask,"setCameraOrientationPositionTask",extraArgs = [coord_vector_num])
 							
+					# "ROTATECAMERA" command
 					elif comm_parts[0] == 'ROTATECAMERA':
 						# Get the angle
 						angle = comm_parts[1]
@@ -1193,17 +1262,21 @@ class ProgramLogic():
 		exoMaterial.setAmbient((0.6,0.6,0.6,1))
 		exoMaterial.setDiffuse((0.25,0.25,0.25,.25))
 		
-		armMaterial = Material()
-		armMaterial.setShininess(12.0)
-		armMaterial.setAmbient((0.6,0.6,0.6,1))
-		armMaterial.setDiffuse((0.3,0.3,0.3,1))
+		armMaterialList = [Material() for i in range(5)]
+		for i in range(5):
+			armMaterialList[i].setShininess(12.0)
+			armMaterialList[i].setAmbient((0.6,0.6,0.6,1))
+			armMaterialList[i].setDiffuse((0.3,0.3,0.3,1))
 		
 		data['exomaterial'] = exoMaterial
-		data['armmaterial'] = armMaterial
+		#data['armmaterial'] = armMaterial
 		
 		data['exo'].setMaterial(exoMaterial)
-		data['arm_rest'].setMaterial(armMaterial)
-		data['prono'].setMaterial(armMaterial)
+		data['arm_rest'].setMaterial(armMaterialList[0])
+		data['prono'].setMaterial(armMaterialList[1])
+		data['fthumb'].setMaterial(armMaterialList[2])
+		data['fgroup'].setMaterial(armMaterialList[3])
+		data['findex'].setMaterial(armMaterialList[4])
 		
 		# Reparent objects		
 		data['arm_rest'].reparentTo(data['exo'])
