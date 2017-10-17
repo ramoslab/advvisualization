@@ -809,6 +809,26 @@ class ProgramLogic():
 									taskMgr.add(self.addExoTask, "addExoTask",extraArgs = [("realtime",handedness.lower()),exoparams_num])
 									# Send ID of the last added exo back to the client
 									taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+						
+						elif exotype == 'EXOKEYBOARD':
+							if len(comm_parts) < 3:
+								raise TypeError('Not enough command parameters supplied.')
+							else:
+								# Check handedness
+								handedness = comm_parts[2]
+								print(handedness)
+								if not(handedness == 'RIGHT' or handedness == 'LEFT'):
+									raise ValueError('Handedness '+handedness+' not recognised. Please use either "left" or "right".')
+									
+								print('MESSAGE: Adding exo of type ' + exotype + '(' + handedness + ').')
+									
+								# Add exo
+								taskMgr.add(self.addExoTask, "addExoTask",extraArgs = [("keyboard",handedness.lower()),""])
+								# Send ID of the last added exo back to the client
+								taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+									
+						else:
+							raise ValueError('"'+exotype+'"'+' is an exo unknown type.')
 									
 					# "DELETE" command
 					elif comm_parts[0] == 'DELETE':
@@ -871,6 +891,20 @@ class ProgramLogic():
 									taskMgr.add(self.addBaseTask, "addBaseTask",extraArgs = ["realtime",exoparams_num])
 									# Send ID of the last added exo back to the client
 									taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+						
+						elif exotype == 'EXOKEYBOARD':
+							if len(comm_parts) < 2:
+								raise TypeError('Not enough command parameters supplied.')
+							else:									
+								print('MESSAGE: Adding exo (base only) of type ' + exotype + '.')
+									
+								# Add exo
+								taskMgr.add(self.addBaseTask, "addBaseTask",extraArgs = ["keyboard",""])
+								# Send ID of the last added exo back to the client
+								taskMgr.doMethodLater(0.5,self.send_latest_id,'Send_Latest_Exo_id',extraArgs = [connection])
+									
+						else:
+							raise ValueError('"'+exotype+'"'+' is an exo unknown type.')
 								
 					# "DATA" command
 					elif comm_parts[0] == 'DATA':
@@ -898,7 +932,10 @@ class ProgramLogic():
 					elif comm_parts[0] == 'SETCOLORBASE':
 						# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
 						id = comm_parts[1]
-						colors = comm_parts[2].split(",")
+						# Get the target part of the exo to be coloured.
+						target = comm_parts[2]
+						# Get the rgb colour information
+						colors = comm_parts[3].split(",")
 						if len(colors) != 3:
 							raise TypeError('Not enough color parameters supplied.')
 						else:
@@ -915,7 +952,12 @@ class ProgramLogic():
 							if not(id in self.exos):
 								raise KeyError('Id '+id+' of Exo not found.')
 							else:
-								taskMgr.add(self.exos[id].setColorBaseTask, "setColorBaseTask",extraArgs = [colors_num])
+								if target == 'BASE':
+									taskMgr.add(self.exos[id].setColorBaseTask, "setColorBaseTask",extraArgs = [colors_num])
+								elif target == 'ARMREST':
+									taskMgr.add(self.exos[id].setColorArmRestTask,"setColorArmRestTask",extraArgs = [colors_num])
+								else:
+									raise ValueError('Target "' + target +'" unknown.')
 					
 					# "SETCOLORHAND" command
 					elif comm_parts[0] == 'SETCOLORHAND':
@@ -940,10 +982,12 @@ class ProgramLogic():
 
 							if not(id in self.exos):
 								raise KeyError('Id '+id+' of Exo not found.')
+							# Catch colour commands for the hand from being send to the base
+							elif(isinstance(self.exos[id],BaseLogic)):
+								raise TypeError('Cannot set color of hand module for EXOBASE object.')
+							
 							else:
-								if target == 'ARMREST':
-									taskMgr.add(self.exos[id].setColorArmRestTask, "setColorArmRestTask",extraArgs = [colors_num])
-								elif target == 'SUPPRO':
+								if target == 'SUPPRO':
 									taskMgr.add(self.exos[id].setColorPronoTask, "setColorPronoTask",extraArgs = [colors_num])
 								elif target == 'THUMB':
 									taskMgr.add(self.exos[id].setColorThumbTask, "setColorThumbTask",extraArgs = [colors_num])
@@ -952,7 +996,7 @@ class ProgramLogic():
 								elif target == 'INDEX':
 									taskMgr.add(self.exos[id].setColorIndexTask, "setColorIndexTask",extraArgs = [colors_num])	
 								else:
-									raise ValueError('Target "'+target+'" does not exist.')
+									raise ValueError('Target "'+target+'" unknown.')
 								
 					# "SETBGCOLOR" command
 					elif comm_parts[0] == 'SETBGCOLOR':
