@@ -917,11 +917,14 @@ class ProgramLogic():
 							else:
 								taskMgr.add(self.exos[id].setColorBaseTask, "setColorBaseTask",extraArgs = [colors_num])
 					
-					# "SETCOLORHAND" command
-					elif comm_parts[0] == 'SETCOLORHAND':
+					# "SETCOLOR" command
+					elif comm_parts[0] == 'SETCOLOR':
 						# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
 						id = comm_parts[1]
-						colors = comm_parts[2].split(",")
+						# Get the target part of the exo to be coloured.
+						target = comm_parts[2]
+						# Get the rgb colour information
+						colors = comm_parts[3].split(",")
 						if len(colors) != 3:
 							raise TypeError('Not enough color parameters supplied.')
 						else:
@@ -938,8 +941,19 @@ class ProgramLogic():
 							if not(id in self.exos):
 								raise KeyError('Id '+id+' of Exo not found.')
 							else:
-								taskMgr.add(self.exos[id].setColorHandTask, "setColorHandTask",extraArgs = [colors_num])
-					
+								if target == 'ARMREST':
+									taskMgr.add(self.exos[id].setColorArmRestTask, "setColorArmRestTask",extraArgs = [colors_num])
+								elif target == 'SUPPRO':
+									taskMgr.add(self.exos[id].setColorPronoTask, "setColorPronoTask",extraArgs = [colors_num])
+								elif target == 'THUMB':
+									taskMgr.add(self.exos[id].setColorThumbTask, "setColorThumbTask",extraArgs = [colors_num])
+								elif target == 'FINGERGROUP':
+									taskMgr.add(self.exos[id].setColorFingerGroupTask, "setColorFingerGroupTask",extraArgs = [colors_num])
+								elif target == 'INDEX':
+									taskMgr.add(self.exos[id].setColorIndexTask, "setColorIndexTask",extraArgs = [colors_num])	
+								else:
+									raise ValueError('Target "'+target+'" does not exist.')
+								
 					# "SETBGCOLOR" command
 					elif comm_parts[0] == 'SETBGCOLOR':
 						# Get the colors
