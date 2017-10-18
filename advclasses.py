@@ -9,6 +9,7 @@ from direct.task import Task
 import random
 import string
 import sys
+import yaml
 #import numpy
 
 # ### Begin ### #
@@ -104,15 +105,15 @@ class ExoLogic(Logic):
 		
 		return Task.done
 	
-	def setColorThumbTask(self,color):
-		''' This task sets the color (lighting) of the thumb. '''
+	def setColorIndexTask(self,color):
+		''' This task sets the color (lighting) of the index finger. '''
 		
-		material = self.fthumb.getMaterial()
+		material = self.findex.getMaterial()
 		material.setAmbient((color[0],color[1],color[2],1))
-		self.fthumb.setMaterial(material)
+		self.findex.setMaterial(material)
 		
 		return Task.done
-		
+
 	def setColorFingerGroupTask(self,color):
 		''' This task sets the color (lighting) of the finger group. '''
 		
@@ -121,13 +122,13 @@ class ExoLogic(Logic):
 		self.fgroup.setMaterial(material)
 		
 		return Task.done
+
+	def setColorThumbTask(self,color):
+		''' This task sets the color (lighting) of the thumb. '''
 		
-	def setColorIndexTask(self,color):
-		''' This task sets the color (lighting) of the index finger. '''
-		
-		material = self.findex.getMaterial()
+		material = self.fthumb.getMaterial()
 		material.setAmbient((color[0],color[1],color[2],1))
-		self.findex.setMaterial(material)
+		self.fthumb.setMaterial(material)
 		
 		return Task.done
 	
@@ -459,9 +460,10 @@ class ExoDataControllerStatic():
 class ExoDataControllerRealTime():
 	''' A DataController that holds the kinematics data which it has received through TCP. '''
 	
-	def __init__(self, id):
+	def __init__(self, id, calibration):
 	
 		self.id = id
+                self.calibration = calibration
 	
 		# Setup exo model
 		self.robot = {}
@@ -471,16 +473,16 @@ class ExoDataControllerRealTime():
 		self.fthumb = {}
 		
 	def set_data(self,exo_state):
-		''' Function that sets the parameters of the degrees of freedom of the robot. '''
+		''' Function that sets the parameters of the degrees of freedom of the robot relative to the values specified in the calibration profile. '''
 		
-		self.robot['x'] = exo_state[0]
-		self.robot['y'] = exo_state[1]
-		self.robot['heading'] = exo_state[2]
+		self.robot['x'] = exo_state[0] + self.calibration['x'] 
+		self.robot['y'] = exo_state[1] + self.calibration['y'] 
+		self.robot['heading'] = exo_state[2] + self.calibration['angle_base'] 
 		
-		self.prono['roll'] = exo_state[3]
-		self.findex['heading'] = exo_state[4]
-		self.fgroup['heading'] = exo_state[5]
-		self.fthumb['heading'] = exo_state[6]
+		self.prono['roll'] = exo_state[3] + self.calibration['angle_suppro'] 
+		self.findex['heading'] = exo_state[4] + self.calibration['angle_index'] 
+		self.fgroup['heading'] = exo_state[5] + self.calibration['angle_fingergroup'] 
+		self.fthumb['heading'] = exo_state[6] + self.calibration['angle_thumb'] 
 		
 	def get_data(self,exo_state):
 		''' Function that returns the position data to the exo logic object '''
@@ -630,21 +632,22 @@ class BaseDataControllerStatic():
 class BaseDataControllerRealTime():
 	''' A DataController that is used to control an exo that has only a base and no arm. It receives the kinematics data through TCP. '''
 	
-	def __init__(self, id):
+        def __init__(self, id, calibration):
 	
 		self.id = id
+                self.calibration = calibration
 	
 		# Setup exo model
 		self.robot = {}
 		self.prono = {}
 					
 	def set_data(self,exo_state):
-		''' Function that sets the parameters of the degrees of freedom of the robot. '''
+		''' Function that sets the parameters of the degrees of freedom of the robot relative to the values specified in the calibration profile. '''
 		
-		self.robot['x'] = exo_state[0]
-		self.robot['y'] = exo_state[1]
-		self.robot['heading'] = exo_state[2]
-			
+		self.robot['x'] = exo_state[0] + self.calibration['x'] 
+		self.robot['y'] = exo_state[1] + self.calibration['y'] 
+		self.robot['heading'] = exo_state[2] + self.calibration['angle_base'] 
+		
 	def get_data(self,exo_state):
 		''' Function that returns the position data to the exo logic object '''
 		
@@ -665,6 +668,10 @@ class ProgramLogic():
 		self.mat = []
 		# This is referring to the root of the rendering tree
 		self.rootNode = render
+                # Representation of a configuration profile (calibration file)
+                self.cfgprofile = self.loadconfig('default') 
+
+                print(self.cfgprofile)
 		
 		# Setup network protocol for the command interface
 		self.cManager = QueuedConnectionManager()
@@ -989,12 +996,12 @@ class ProgramLogic():
 							else:
 								if target == 'SUPPRO':
 									taskMgr.add(self.exos[id].setColorPronoTask, "setColorPronoTask",extraArgs = [colors_num])
-								elif target == 'THUMB':
-									taskMgr.add(self.exos[id].setColorThumbTask, "setColorThumbTask",extraArgs = [colors_num])
-								elif target == 'FINGERGROUP':
-									taskMgr.add(self.exos[id].setColorFingerGroupTask, "setColorFingerGroupTask",extraArgs = [colors_num])
 								elif target == 'INDEX':
 									taskMgr.add(self.exos[id].setColorIndexTask, "setColorIndexTask",extraArgs = [colors_num])	
+								elif target == 'FINGERGROUP':
+									taskMgr.add(self.exos[id].setColorFingerGroupTask, "setColorFingerGroupTask",extraArgs = [colors_num])
+								elif target == 'THUMB':
+									taskMgr.add(self.exos[id].setColorThumbTask, "setColorThumbTask",extraArgs = [colors_num])
 								else:
 									raise ValueError('Target "'+target+'" unknown.')
 								
@@ -1141,7 +1148,7 @@ class ProgramLogic():
 			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
 			
 			# Create logic objects
-			dc = ExoDataControllerRealTime(rand_id)
+			dc = ExoDataControllerRealTime(rand_id,self.cfgprofile['calibration'])
 			# Set initial data
 			dc.set_data(data)
 			exo = ExoLogic(modeldata['exo'],modeldata['armrest'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
@@ -1202,7 +1209,7 @@ class ProgramLogic():
 			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
 			
 			# Create logic objects
-			dc = BaseDataControllerRealTime(rand_id)
+			dc = BaseDataControllerRealTime(rand_id,self.cfgprofile['calibration'])
 			dc.set_data(data)
 			exo = BaseLogic(modeldata['exo'],modeldata['armrest'],dc)
 			
@@ -1393,3 +1400,17 @@ class ProgramLogic():
 		
 		print(dotProd)
 		return dotProd
+
+        def loadconfig(self,filename):
+            ''' Loads a yaml configuration file and returns contents as a dictionary.''' 
+            try:
+                with open(filename+'.yml', 'r') as ymlfile:
+                    cfg = yaml.load(ymlfile)
+                
+                return cfg
+            except IOError:
+                print("Could not find profile: "+filename+".")
+
+        def setconfig(self,config_dictionary):
+            ''' Sets a configuration dictionary as cfgprofile in the program logic.'''
+            self.cfgprofile = config_dictionary

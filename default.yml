@@ -1,0 +1,9 @@
+# Empty default profile (DO NOT CHANGE!)
+calibration:
+    x: 0
+    y: 0
+    angle_base: 0
+    angle_suppro: -85
+    angle_index: 0
+    angle_fingergroup: 0
+    angle_thumb: 0
