@@ -429,24 +429,31 @@ class ExoDataControllerKeyboard():
 class ExoDataControllerStatic():
 	''' A DataController that returns the static position value with which it was initialised. '''
 	
-	def __init__(self,id,exo_x,exo_y,exo_h,prono_r,findex_h,fgroup_h,fthumb_h):
+	def __init__(self,id,calibration,handedness,exo_x,exo_y,exo_h,prono_r,findex_h,fgroup_h,fthumb_h):
 		
 		self.id = id
+                self.calibration = calibration
+                self.handedness = handedness
 		
 		self.robot = {}
 		self.prono = {}
 		self.findex = {}
 		self.fgroup = {}
 		self.fthumb = {}
-				
-		self.robot['x'] = exo_x
-		self.robot['y'] = exo_y
-		self.robot['heading'] = exo_h
+
+                # Set multiplication factor to mirror rotation of the wrist module
+                mf = 1
+                if self.handedness.upper() == "LEFT":
+                    mf = -1
+
+		self.robot['x'] = exo_x + self.calibration['x']
+		self.robot['y'] = exo_y + self.calibration['y']
+		self.robot['heading'] = exo_h + self.calibration['angle_base']
 		
-		self.prono['roll'] = prono_r
-		self.findex['heading'] = findex_h
-		self.fgroup['heading'] = fgroup_h
-		self.fthumb['heading'] = fthumb_h
+		self.prono['roll'] = mf * (prono_r + self.calibration['angle_suppro'])
+		self.findex['heading'] = findex_h + self.calibration['angle_index']
+		self.fgroup['heading'] = fgroup_h + self.calibration['angle_fingergroup']
+		self.fthumb['heading'] = fthumb_h + self.calibration['angle_thumb']
 			
 	def get_data(self,exo_state):
 		''' Function that returns the position data to the exo logic object '''
@@ -479,9 +486,6 @@ class ExoDataControllerRealTime():
                 mf = 1
                 if self.handedness.upper() == "LEFT":
                     mf = -1
-
-                print(self.calibration)
-                print(self.robot)
 
 		self.robot['x'] = exo_state[0] + self.calibration['x']
 		self.robot['y'] = exo_state[1] + self.calibration['y']
@@ -625,16 +629,17 @@ class BaseDataControllerKeyboard():
 class BaseDataControllerStatic():
 	''' A DataController that controls an exo that only consists of a base. It is initialised with static kinematics. '''
 	
-	def __init__(self,id,exo_x,exo_y,exo_h):
+	def __init__(self,id,calibration,exo_x,exo_y,exo_h):
 		
 		self.id = id
+                self.calibration = calibration
 		
 		self.robot = {}
 		self.prono = {}
 				
-		self.robot['x'] = exo_x
-		self.robot['y'] = exo_y
-		self.robot['heading'] = exo_h
+		self.robot['x'] = exo_x + self.calibration['x']
+		self.robot['y'] = exo_y + self.calibration['y']
+		self.robot['heading'] = exo_h + self.calibration['angle_base']
 				
 	def get_data(self,exo_state):
 		''' Function that returns the kinematics data to the base logic object '''
@@ -664,6 +669,10 @@ class BaseDataControllerRealTime():
 		''' Function that returns the position data to the exo logic object '''
 		
 		return (self.robot)
+        
+        def setconfig(self,calibration):
+            ''' Sets the given cfgprofile as calibration profile.'''
+            self.calibration = calibration
 		
 		
 
@@ -945,7 +954,10 @@ class ProgramLogic():
 							if not(id in self.exos):
 								raise KeyError('Id '+id+' of Exo not found.')
 							else:
+                                                            if (isinstance(self.exos[id].dc,ExoDataControllerRealTime) or isinstance(self.exos[id].dc, BaseDataControllerRealTime)):
 								self.exos[id].dc.set_data(exoparams_num)
+                                                            else:
+                                                                raise TypeError('Cannot send data to static or keyboard-controlled exo.')
 
                                         # "LOADCONFIG" command
                                         elif comm_parts[0] == 'LOADCONFIG':
@@ -1160,7 +1172,7 @@ class ProgramLogic():
 			print(data)
 			
 			# Create logic objects
-			dc = ExoDataControllerStatic(rand_id,data[0],data[1],data[2],data[3],data[4],data[5],data[6])
+			dc = ExoDataControllerStatic(rand_id,self.cfgprofile['calibration'],type[1],data[0],data[1],data[2],data[3],data[4],data[5],data[6])
 			exo = ExoLogic(modeldata['exo'],modeldata['armrest'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
 			
 			# Add Exo to the program logic
@@ -1221,7 +1233,7 @@ class ProgramLogic():
 			print(data)
 			
 			# Create logic objects
-			dc = BaseDataControllerStatic(rand_id,data[0],data[1],data[2])
+			dc = BaseDataControllerStatic(rand_id,self.cfgprofile['calibration'],data[0],data[1],data[2])
 			exo = BaseLogic(modeldata['exo'],modeldata['armrest'],dc)
 			
 			# Add Exo to the program logic
