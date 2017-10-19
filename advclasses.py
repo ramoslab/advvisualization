@@ -460,10 +460,11 @@ class ExoDataControllerStatic():
 class ExoDataControllerRealTime():
 	''' A DataController that holds the kinematics data which it has received through TCP. '''
 	
-	def __init__(self, id, calibration):
+	def __init__(self, id, calibration, handedness):
 	
 		self.id = id
                 self.calibration = calibration
+                self.handedness = handedness
 	
 		# Setup exo model
 		self.robot = {}
@@ -474,20 +475,31 @@ class ExoDataControllerRealTime():
 		
 	def set_data(self,exo_state):
 		''' Function that sets the parameters of the degrees of freedom of the robot relative to the values specified in the calibration profile. '''
+                # Set multiplication factor to mirror rotation of the wrist module
+                mf = 1
+                if self.handedness.upper() == "LEFT":
+                    mf = -1
+
+                print(self.calibration)
+                print(self.robot)
+
+		self.robot['x'] = exo_state[0] + self.calibration['x']
+		self.robot['y'] = exo_state[1] + self.calibration['y']
+		self.robot['heading'] = exo_state[2] + self.calibration['angle_base']
 		
-		self.robot['x'] = exo_state[0] + self.calibration['x'] 
-		self.robot['y'] = exo_state[1] + self.calibration['y'] 
-		self.robot['heading'] = exo_state[2] + self.calibration['angle_base'] 
-		
-		self.prono['roll'] = exo_state[3] + self.calibration['angle_suppro'] 
-		self.findex['heading'] = exo_state[4] + self.calibration['angle_index'] 
-		self.fgroup['heading'] = exo_state[5] + self.calibration['angle_fingergroup'] 
-		self.fthumb['heading'] = exo_state[6] + self.calibration['angle_thumb'] 
+		self.prono['roll'] = mf * (exo_state[3] + self.calibration['angle_suppro'])
+		self.findex['heading'] = exo_state[4] + self.calibration['angle_index']
+		self.fgroup['heading'] = exo_state[5] + self.calibration['angle_fingergroup']
+		self.fthumb['heading'] = exo_state[6] + self.calibration['angle_thumb']
 		
 	def get_data(self,exo_state):
 		''' Function that returns the position data to the exo logic object '''
 		
 		return (self.robot,self.prono,self.findex,self.fgroup,self.fthumb)
+        
+        def setconfig(self,calibration):
+            ''' Sets the given cfgprofile as calibration profile.'''
+            self.calibration = calibration
 		
 class BaseDataControllerKeyboard():
 	''' A DataController that is used to control the kinematics of an exo that has only a base and no arm position according to the keyboard input. '''
@@ -934,7 +946,24 @@ class ProgramLogic():
 								raise KeyError('Id '+id+' of Exo not found.')
 							else:
 								self.exos[id].dc.set_data(exoparams_num)
-								
+
+                                        # "LOADCONFIG" command
+                                        elif comm_parts[0] == 'LOADCONFIG':
+                                            # Get the filename
+                                            fname = comm_parts[1]
+
+                                            taskMgr.add(self.loadConfigTask, "loadConfigTask",extraArgs = [fname])
+
+                                        # "SETCONFIG" command
+                                        elif comm_parts[0] == 'SETCONFIG': 
+                                            # Get the id of the exo. If the id does not exist a KeyError is raised and caught.
+                                            exo_id = comm_parts[1]
+                                            
+                                            if not(exo_id in self.exos):
+                                                raise KeyError('Id '+exo_id+' of Exo not found.')
+                                            else:
+						taskMgr.add(self.setConfigTask, "setConfigTask",extraArgs = [exo_id])
+
 					# "SETCOLORBASE" command
 					elif comm_parts[0] == 'SETCOLORBASE':
 						# Get the id of the exo. If the id does not exist a KeyError is raised and caught.
@@ -1148,7 +1177,7 @@ class ProgramLogic():
 			rand_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase) for _ in range(5))
 			
 			# Create logic objects
-			dc = ExoDataControllerRealTime(rand_id,self.cfgprofile['calibration'])
+			dc = ExoDataControllerRealTime(rand_id,self.cfgprofile['calibration'],type[1])
 			# Set initial data
 			dc.set_data(data)
 			exo = ExoLogic(modeldata['exo'],modeldata['armrest'],modeldata['prono'],modeldata['findex'],modeldata['fgroup'],modeldata['fthumb'],dc)
@@ -1286,6 +1315,22 @@ class ProgramLogic():
 		camLogic.rotate(angle)
 	
 		return Task.done
+
+        def loadConfigTask(self,filename):
+            ''' Loads and initializes config.'''
+            cfg = {}
+            cfg = self.loadconfig(filename)
+
+            if(cfg):
+                self.initializeconfig(cfg)
+
+            return Task.done
+
+        def setConfigTask(self,exo_id):
+            ''' Sets the current configuration dictionary as calibration profile of the specified exo.'''
+            self.exos[exo_id].dc.setconfig(self.cfgprofile['calibration'])
+
+            return Task.done
 	
 	def create_exo_model(self,handedness):
 		''' Function that loads an exo model with left or right hand arm. '''
@@ -1407,10 +1452,12 @@ class ProgramLogic():
                 with open(filename+'.yml', 'r') as ymlfile:
                     cfg = yaml.load(ymlfile)
                 
+                print("Profile "+filename+" loaded.")
                 return cfg
             except IOError:
                 print("Could not find profile: "+filename+".")
 
-        def setconfig(self,config_dictionary):
+        def initializeconfig(self,config_dictionary):
             ''' Sets a configuration dictionary as cfgprofile in the program logic.'''
             self.cfgprofile = config_dictionary
+            print("New profile initialized.")

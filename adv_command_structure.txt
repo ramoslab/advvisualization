@@ -97,6 +97,10 @@ EXIT - End visualisation (close Panda3D)
 Command structure:
 EXIT
 
+LOADCONFIG
+
+SETCONFIG
+
 
 # ### Exotypes ### #
 
