@@ -690,9 +690,13 @@ class ProgramLogic():
 		# This is referring to the root of the rendering tree
 		self.rootNode = render
                 # Representation of a configuration profile (calibration file)
-                self.cfgprofile = self.loadconfig('default') 
+                tmp_profile = self.loadconfig('default')
 
-                print(self.cfgprofile)
+                if not(tmp_profile):
+                    raise IOError('Default profile (default.yml) not found. Exiting.')
+                    sys.exit
+                else:
+                    self.cfgprofile = tmp_profile
 		
 		# Setup network protocol for the command interface
 		self.cManager = QueuedConnectionManager()
