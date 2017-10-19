@@ -97,9 +97,19 @@ EXIT - End visualisation (close Panda3D)
 Command structure:
 EXIT
 
-LOADCONFIG
+LOADCONFIG - Load a configuration profile file (.yml)
+Command structure:
+LOADCONFIG FILENAME
 
-SETCONFIG
+Parameters:
+Filename - The filename (without the file ending after the ".") of the calibration profile
+
+SETCONFIG - Assign the current configuration profile to an exo
+Command structure:
+SETCONFIG EXOID
+
+Parameters:
+Exoid - The unique id of an existing exo
 
 
 # ### Exotypes ### #

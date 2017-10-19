@@ -944,7 +944,7 @@ class ProgramLogic():
 						id = comm_parts[1]
 						exoparams = comm_parts[2].split(",")
 						if len(exoparams) != 7:
-							raise TypeError('Not enough kinematics parameters supplied.')
+							raise TypeError('Wrong number of kinematics parameters supplied.')
 						else:
 							# Convert input strings to floats
 							try:
