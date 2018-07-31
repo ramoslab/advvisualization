@@ -427,40 +427,24 @@ class ExoDataControllerKeyboard():
             return (exo_state[3] - 2)%360
 
 class ExoDataControllerStatic():
-<<<<<<< HEAD
-	''' A DataController that returns the static position value with which it was initialised. '''
-	
-	def __init__(self,id,calibration,handedness,exo_x,exo_y,exo_h,prono_r,findex_h,fgroup_h,fthumb_h):
-		
-                self.id = id
-                self.calibration = calibration
-                self.handedness = handedness
-		
-                self.robot = {}
-		self.prono = {}
-		self.findex = {}
-		self.fgroup = {}
-		self.fthumb = {}
-=======
     ''' A DataController that returns the static position value with which it was initialised. '''
     
     def __init__(self,id,calibration,handedness,exo_x,exo_y,exo_h,prono_r,findex_h,fgroup_h,fthumb_h):
         
         self.id = id
-                self.calibration = calibration
-                self.handedness = handedness
+        self.calibration = calibration
+        self.handedness = handedness
         
         self.robot = {}
         self.prono = {}
         self.findex = {}
         self.fgroup = {}
         self.fthumb = {}
->>>>>>> 560b9f95ece7603a49370bbc3d102101dc66135e
 
-                # Set multiplication factor to mirror rotation of the wrist module
-                mf = 1
-                if self.handedness.upper() == "LEFT":
-                    mf = -1
+        # Set multiplication factor to mirror rotation of the wrist module
+        mf = 1
+        if self.handedness.upper() == "LEFT":
+            mf = -1
 
         self.robot['x'] = exo_x + self.calibration['x']
         self.robot['y'] = exo_y + self.calibration['y']
