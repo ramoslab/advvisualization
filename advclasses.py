@@ -9,7 +9,7 @@ from direct.task import Task
 import random
 import string
 import sys
-import yaml
+#import yaml
 #import numpy
 
 # ### Begin ### #
@@ -1462,18 +1462,13 @@ class ProgramLogic():
         print(dotProd)
         return dotProd
 
-        def loadconfig(self,filename):
-            ''' Loads a yaml configuration file and returns contents as a dictionary.''' 
-            try:
-                with open(filename+'.yml', 'r') as ymlfile:
-                    cfg = yaml.load(ymlfile)
-                
-                print("Profile "+filename+" loaded.")
-                return cfg
-            except IOError:
-                print("Could not find profile: "+filename+".")
+    def loadconfig(self,filename):
+        ''' Loads a yaml configuration file and returns contents as a dictionary.''' 
+        import advvis_config
+        print(advvis_config.cfg)
+        return advvis_config.cfg
 
-        def initializeconfig(self,config_dictionary):
-            ''' Sets a configuration dictionary as cfgprofile in the program logic.'''
-            self.cfgprofile = config_dictionary
-            print("New profile initialized.")
+    def initializeconfig(self,config_dictionary):
+        ''' Sets a configuration dictionary as cfgprofile in the program logic.'''
+        self.cfgprofile = config_dictionary
+        print("New profile initialized.")
