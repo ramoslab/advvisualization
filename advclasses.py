@@ -482,10 +482,10 @@ class ExoDataControllerRealTime():
         
     def set_data(self,exo_state):
         ''' Function that sets the parameters of the degrees of freedom of the robot relative to the values specified in the calibration profile. '''
-                # Set multiplication factor to mirror rotation of the wrist module
-                mf = 1
-                if self.handedness.upper() == "LEFT":
-                    mf = -1
+        # Set multiplication factor to mirror rotation of the wrist module
+        mf = 1
+        if self.handedness.upper() == "LEFT":
+            mf = -1
 
         self.robot['x'] = exo_state[0] + self.calibration['x']
         self.robot['y'] = exo_state[1] + self.calibration['y']
@@ -632,7 +632,7 @@ class BaseDataControllerStatic():
     def __init__(self,id,calibration,exo_x,exo_y,exo_h):
         
         self.id = id
-                self.calibration = calibration
+        self.calibration = calibration
         
         self.robot = {}
         self.prono = {}
@@ -649,10 +649,10 @@ class BaseDataControllerStatic():
 class BaseDataControllerRealTime():
     ''' A DataController that is used to control an exo that has only a base and no arm. It receives the kinematics data through TCP. '''
     
-        def __init__(self, id, calibration):
+    def __init__(self, id, calibration):
     
         self.id = id
-                self.calibration = calibration
+        self.calibration = calibration
     
         # Setup exo model
         self.robot = {}
@@ -689,14 +689,14 @@ class ProgramLogic():
         self.mat = []
         # This is referring to the root of the rendering tree
         self.rootNode = render
-                # Representation of a configuration profile (calibration file)
-                tmp_profile = self.loadconfig('default')
+        # Representation of a configuration profile (calibration file)
+        tmp_profile = self.loadconfig('default')
 
-                if not(tmp_profile):
-                    raise IOError('Default profile (default.yml) not found. Exiting.')
-                    sys.exit
-                else:
-                    self.cfgprofile = tmp_profile
+        if not(tmp_profile):
+            raise IOError('Default profile (default.yml) not found. Exiting.')
+            sys.exit
+        else:
+            self.cfgprofile = tmp_profile
         
         # Setup network protocol for the command interface
         self.cManager = QueuedConnectionManager()
@@ -958,27 +958,27 @@ class ProgramLogic():
                             if not(id in self.exos):
                                 raise KeyError('Id '+id+' of Exo not found.')
                             else:
-                                                            if (isinstance(self.exos[id].dc,ExoDataControllerRealTime) or isinstance(self.exos[id].dc, BaseDataControllerRealTime)):
-                                self.exos[id].dc.set_data(exoparams_num)
-                                                            else:
-                                                                raise TypeError('Cannot send data to static or keyboard-controlled exo.')
+                                if (isinstance(self.exos[id].dc,ExoDataControllerRealTime) or isinstance(self.exos[id].dc, BaseDataControllerRealTime)):
+                                    self.exos[id].dc.set_data(exoparams_num)
+                                else:
+                                    raise TypeError('Cannot send data to static or keyboard-controlled exo.')
 
-                                        # "LOADCONFIG" command
-                                        elif comm_parts[0] == 'LOADCONFIG':
-                                            # Get the filename
-                                            fname = comm_parts[1]
+                    # "LOADCONFIG" command
+                    elif comm_parts[0] == 'LOADCONFIG':
+                        # Get the filename
+                        fname = comm_parts[1]
 
-                                            taskMgr.add(self.loadConfigTask, "loadConfigTask",extraArgs = [fname])
+                        taskMgr.add(self.loadConfigTask, "loadConfigTask",extraArgs = [fname])
 
-                                        # "SETCONFIG" command
-                                        elif comm_parts[0] == 'SETCONFIG': 
-                                            # Get the id of the exo. If the id does not exist a KeyError is raised and caught.
-                                            exo_id = comm_parts[1]
-                                            
-                                            if not(exo_id in self.exos):
-                                                raise KeyError('Id '+exo_id+' of Exo not found.')
-                                            else:
-                        taskMgr.add(self.setConfigTask, "setConfigTask",extraArgs = [exo_id])
+                    # "SETCONFIG" command
+                    elif comm_parts[0] == 'SETCONFIG': 
+                        # Get the id of the exo. If the id does not exist a KeyError is raised and caught.
+                        exo_id = comm_parts[1]
+                               
+                        if not(exo_id in self.exos):
+                            raise KeyError('Id '+exo_id+' of Exo not found.')
+                        else:
+                            taskMgr.add(self.setConfigTask, "setConfigTask",extraArgs = [exo_id])
 
                     # "SETCOLORBASE" command
                     elif comm_parts[0] == 'SETCOLORBASE':
