@@ -431,11 +431,11 @@ class ExoDataControllerStatic():
 	
 	def __init__(self,id,calibration,handedness,exo_x,exo_y,exo_h,prono_r,findex_h,fgroup_h,fthumb_h):
 		
-		self.id = id
+                self.id = id
                 self.calibration = calibration
                 self.handedness = handedness
 		
-		self.robot = {}
+                self.robot = {}
 		self.prono = {}
 		self.findex = {}
 		self.fgroup = {}
